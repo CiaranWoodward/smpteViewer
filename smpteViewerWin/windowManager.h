@@ -2,6 +2,8 @@
 #include <SDL.h>
 #undef main
 
+#include "imagePacker.h"
+
 class windowManager
 {
 public:
@@ -15,5 +17,6 @@ private:
 	SDL_Texture *texture;
 	SDL_Event event;
 	uint8_t* pixels;
+	imagePacker mImagePacker;
 };
 

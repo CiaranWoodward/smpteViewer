@@ -130,6 +130,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="debugUtil.h" />
+    <ClInclude Include="imagePacker.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="windowManager.h" />
   </ItemGroup>
@@ -137,6 +138,7 @@
     <ResourceCompile Include="smpteViewerWin.rc" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="imagePacker.cpp" />
     <ClCompile Include="launcher.cpp" />
     <ClCompile Include="windowManager.cpp" />
   </ItemGroup>

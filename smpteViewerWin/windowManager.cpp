@@ -51,18 +51,13 @@ void windowManager::start()
 		exit(1);
 	}
 
-	uint8_t counter = 0;
-	uint8_t counterColour = 0;
+	mImagePacker.init(xDim, yDim);
 
 	while (1) {
-		for (int i = 0; i < pixelBufferSize; i += 2) {
-			pixels[i] = counter++;
-			pixels[i + 1] = counterColour;
-		}
-		counterColour++;
+
+		pixels = mImagePacker.getNextPixels();
 
 		SDL_UpdateTexture(texture, NULL, pixels, xDim * 2);
-		//SDL_RenderClear(renderer);
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
 		SDL_RenderPresent(renderer);
 
