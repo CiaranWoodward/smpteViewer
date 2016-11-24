@@ -131,6 +131,7 @@
   <ItemGroup>
     <ClInclude Include="debugUtil.h" />
     <ClInclude Include="imagePacker.h" />
+    <ClInclude Include="packetGetter.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="windowManager.h" />
   </ItemGroup>
@@ -140,6 +141,7 @@
   <ItemGroup>
     <ClCompile Include="imagePacker.cpp" />
     <ClCompile Include="launcher.cpp" />
+    <ClCompile Include="packetGetter.cpp" />
     <ClCompile Include="windowManager.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -32,6 +32,12 @@
     <ClInclude Include="debugUtil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="imagePacker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="packetGetter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="smpteViewerWin.rc">
@@ -43,6 +49,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="windowManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="imagePacker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="packetGetter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

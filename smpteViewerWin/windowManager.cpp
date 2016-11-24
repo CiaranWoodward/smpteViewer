@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define xDim 1920
-#define yDim 1080
+#define xDim 720
+#define yDim 486
 
 #define pixelBufferSize xDim*yDim*2
 
