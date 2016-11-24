@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include "packetGetter.h"
 
 class imagePacker
 {
@@ -11,6 +12,6 @@ public:
 private:
 	uint8_t * pixelBuf;
 	int width, height, pixelBufLen;
-
+	packetGetter mPacketGetter;
 };
 

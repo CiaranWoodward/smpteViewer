@@ -56,10 +56,10 @@ packetGetter::~packetGetter()
 void packetGetter::lockFirstFrame()
 {
 	while (!isLocked) {
-		if (pkts[curPackNo][62] == 0xFF &&
+		if (pkts[curPackNo][62] == 0xFF &&	//Look for TRS Preamble which is 0x3FF 0x000 0x000 (ten bit hex)
 			pkts[curPackNo][63] == 0xC0 &&
 			pkts[curPackNo][64] == 0x00 &&
-			pkts[curPackNo][65] == 0x02)
+			pkts[curPackNo][65] & 0xFC == 0x00)
 		{
 			isLocked = true;
 			prevPacketSeq = (pkts[curPackNo][45]) - 1;
