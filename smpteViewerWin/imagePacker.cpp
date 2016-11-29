@@ -19,8 +19,10 @@ void imagePacker::init(int width, int height)
 uint8_t * imagePacker::getNextPixels()
 {
 	bool processingRemaining = true;
+	int curSDIDataCount = 0;
+	int ignoreDectets = 0;
 	while (processingRemaining) {
-		uint8_t * packet = mPacketGetter.getNextPacket();
+		const uint8_t * packet = mPacketGetter.getNextPacket();
 		if (packet[43] & 0x80) processingRemaining = false; //Marker is set, final packet of frame
 		int curOffset = 62;
 		uint8_t bitOffset = 0;
@@ -42,20 +44,37 @@ uint8_t * imagePacker::getNextPixels()
 			//Remove any special data
 			//TODO: remove TLV data
 			//TODO: Sync to frame starts and edges
-			if (curDectet < 4 || curDectet > 1019) continue;
+			if (curDectet < 4 || curDectet > 1019) {
+				ignoreDectets = 1;
+				continue;
+			}
+			else if (ignoreDectets) {
+				ignoreDectets--;
+				continue;
+			}
 
 			//Reduce the range to 8 bits by removing the 2 LSB
 			curDectet = curDectet >> 2;
 
-			//TODO: Transfer the data into the pixel buffer in the correct order
+			//Transfer the data into the pixel buffer in the correct order
+			//Cb -> U; Y -> Y; Cr -> V
+			int pixelIndex = curSDIDataCount;
+			pixelIndex += (curSDIDataCount % 2) ? -1 : 1;
+
+			if (pixelIndex > pixelBufLen) {
+				return pixelBuf; //this shouldn't happen
+			}
+
+			pixelBuf[pixelIndex] = curDectet;
+			curSDIDataCount++;
 		}
 	}
-	uint8_t * packet = NULL;
+	/*uint8_t * packet = NULL;
 	for (int i = 0; i < pixelBufLen; i += 2) {
 		pixelBuf[i] = counter++;
 		pixelBuf[i + 1] = counterColour;
 	}
-	counterColour++;
+	counterColour++;*/
 
 	return pixelBuf;
 }

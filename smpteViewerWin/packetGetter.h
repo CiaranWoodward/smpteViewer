@@ -5,7 +5,7 @@ class packetGetter
 {
 public:
 	packetGetter();
-	uint8_t * getNextPacket();
+	const uint8_t * getNextPacket();
 	~packetGetter();
 private:
 	void lockFirstFrame();

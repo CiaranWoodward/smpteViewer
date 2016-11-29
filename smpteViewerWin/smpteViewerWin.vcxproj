@@ -85,9 +85,9 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>H:\Documents\gdp26\third_party\SDL2-devel-2.0.5-VC\SDL2-2.0.5\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>H:\Documents\gdp26\data;H:\Documents\gdp26\third_party\SDL2-devel-2.0.5-VC\SDL2-2.0.5\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BasicRuntimeChecks />
     </ClCompile>
     <Link>
@@ -141,7 +141,9 @@
   <ItemGroup>
     <ClCompile Include="imagePacker.cpp" />
     <ClCompile Include="launcher.cpp" />
-    <ClCompile Include="packetGetter.cpp" />
+    <ClCompile Include="packetGetter.cpp">
+      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</MultiProcessorCompilation>
+    </ClCompile>
     <ClCompile Include="windowManager.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
