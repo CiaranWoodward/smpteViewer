@@ -24,6 +24,7 @@ uint8_t * imagePacker::getNextPixels()
 	int syncStart = 0, ancStart = 0;
 	bool horizontalBlanking = 0;
 	bool verticalBlanking = 0;
+	bool interleaved = 0;
 	bool skipFirstOctet = false;
 	uint16_t curDectet = 0;
 	uint8_t bitOffset = 0;
@@ -79,6 +80,13 @@ uint8_t * imagePacker::getNextPixels()
 						else {
 							horizontalBlanking = 0;
 						}
+
+						if (curDectet & (1 << 8)) {	//F bit = Interleaving
+							interleaved = 1;
+						}
+						else {
+							interleaved = 0;
+						}
 					}
 				}
 
@@ -96,7 +104,7 @@ uint8_t * imagePacker::getNextPixels()
 				continue;
 			}
 
-			if (horizontalBlanking) continue;
+			if (horizontalBlanking || verticalBlanking) continue;
 
 			//Reduce the range to 8 bits by removing the 2 LSB
 			curDectet = curDectet >> 2;
@@ -106,8 +114,24 @@ uint8_t * imagePacker::getNextPixels()
 			int pixelIndex = curSDIDataCount;
 			pixelIndex += (curSDIDataCount % 2) ? -1 : 1;
 
-			if (pixelIndex > pixelBufLen) {
-				return pixelBuf; //this shouldn't happen
+			int pixelRow = pixelIndex / (width * 2);
+			int pixelOffset = pixelIndex - (pixelRow * (width * 2));
+			//pixelRow *= 2;
+
+			if (interleaved) {
+				pixelRow -= height/2;
+				pixelRow *= 2;
+				pixelRow += 1;
+			}
+			else {
+				pixelRow *= 2;
+			}
+
+			pixelIndex = pixelRow * width * 2;
+			pixelIndex += pixelOffset;
+
+			if (pixelIndex > pixelBufLen || pixelIndex < 0) {
+				continue;
 			}
 
 			pixelBuf[pixelIndex] = curDectet;
