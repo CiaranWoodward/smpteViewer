@@ -61,7 +61,7 @@ void windowManager::start()
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
 		SDL_RenderPresent(renderer);
 
-		SDL_Delay(500);
+//		SDL_Delay(500);
 
 		SDL_PollEvent(&event);
 		switch (event.type) {

@@ -29,7 +29,8 @@ uint8_t * imagePacker::getNextPixels()
 	uint16_t curDectet = 0;
 	uint8_t bitOffset = 0;
 	while (processingRemaining) {
-		const uint8_t * packet = mPacketGetter.getNextPacket();
+		pkt_ll * pkt = mPacketGetter.getNextPacket();
+		uint8_t * packet = pkt->pkt;
 		if (packet[43] & 0x80) processingRemaining = false; //Marker is set, final packet of frame
 		int curOffset = 62;
 
@@ -137,6 +138,7 @@ uint8_t * imagePacker::getNextPixels()
 			pixelBuf[pixelIndex] = curDectet;
 			curSDIDataCount++;
 		}
+		mPacketGetter.releasePacket(pkt);
 	}
 	/*uint8_t * packet = NULL;
 	for (int i = 0; i < pixelBufLen; i += 2) {
