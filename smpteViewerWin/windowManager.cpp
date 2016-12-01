@@ -2,6 +2,8 @@
 #include "debugUtil.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <chrono>
+#include <thread>
 
 #define xDim 720
 #define yDim 486
@@ -53,6 +55,9 @@ void windowManager::start()
 
 	mImagePacker.init(xDim, yDim);
 
+	std::chrono::time_point<std::chrono::steady_clock> prev = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::steady_clock> now;
+
 	while (1) {
 
 		pixels = mImagePacker.getNextPixels();
@@ -61,7 +66,13 @@ void windowManager::start()
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
 		SDL_RenderPresent(renderer);
 
-//		SDL_Delay(500);
+		now = std::chrono::high_resolution_clock::now();
+		prev = prev + std::chrono::nanoseconds(33333333);
+
+		if (std::chrono::duration_cast<std::chrono::nanoseconds>(prev-now).count() > 0) {
+			std::this_thread::sleep_for(prev-now);
+		}
+		prev = now;
 
 		SDL_PollEvent(&event);
 		switch (event.type) {
