@@ -3,7 +3,8 @@
 
 static uint8_t counter, counterColour = 0;
 
-imagePacker::imagePacker()
+imagePacker::imagePacker(std::string & filepath):
+	mPacketGetter(filepath)
 {	
 	pixelBuf = NULL;
 }

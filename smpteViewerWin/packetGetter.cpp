@@ -1,32 +1,18 @@
-#include <thread>
-#include <condition_variable>
-#include <mutex>
-#include <atomic>
-
 #include "packetGetter.h"
 
-//TODO: Include the ridiculous array of ethernet frames here
-//uint8_t ** pkts;
-
-struct pkt_ll * pkt_head;
-struct pkt_ll * pkt_tail;
-std::condition_variable pkt_head_cv;
-std::mutex pkt_head_mutex;
-
-//Stash is for single threaded use only
-struct pkt_ll * stash_pkt_head = NULL;
-struct pkt_ll * stash_pkt_tail = NULL;
-
-struct pkt_ll * free_pkt_head;
-std::condition_variable free_pkt_head_cv;
-std::mutex free_pkt_head_mutex;
-
-std::atomic_bool reset = false;
-
-
-packetGetter::packetGetter() :
-	iothread(&sFillBuffer, this)
+packetGetter::packetGetter(std::string & filepath) :
+	iothread(&sFillBuffer, this, filepath)
 {
+	isLocked = false;
+	prevPacketSeq = 0;
+	curPackNo = 0;
+
+	stash_pkt_head = NULL;
+	stash_pkt_tail = NULL;
+
+	reset = false;
+	exitFlag = false;
+
 	free_pkt_head = NULL;
 	pkt_head = NULL;
 
@@ -108,16 +94,18 @@ void packetGetter::lockFirstFrame()
 	}
 }
 
-void packetGetter::sFillBuffer(packetGetter * const context)
+void packetGetter::sFillBuffer(packetGetter * const context, std::string filepath)	//Copy filepath, not ref
 {
-	context->fillBuffer();
+	context->fillBuffer(filepath);
 }
 
-void packetGetter::fillBuffer()
+void packetGetter::fillBuffer(std::string & filepath)
 {
 	while (1) {
-		std::ifstream instr = std::ifstream("C:\\Users\\cw15g13\\pcap_in.pcap", std::ios::in | std::ios::binary);
-		while (reset) (void)0;
+		std::ifstream instr = std::ifstream(filepath, std::ios::in | std::ios::binary);
+		while (reset || exitFlag) {
+			if (exitFlag) return;
+		}
 
 		uint8_t header[24];
 		instr.seekg(0, std::ios::beg);
@@ -130,6 +118,7 @@ void packetGetter::fillBuffer()
 			return;	//Not a valid pcap file
 		}
 		while (1) {
+			if (exitFlag) return;
 			struct pkt_ll * tempPkt = popFreePkt();
 
 			//Fill packet
@@ -237,4 +226,20 @@ pkt_ll * packetGetter::popPkt()
 
 packetGetter::~packetGetter()
 {
+	exitFlag = true;
+
+	popStash();
+	if (free_pkt_head == NULL) {
+		freePkt(popPkt());
+	}
+
+	iothread.join();
+	
+	while (pkt_head != NULL) {
+		freePkt(popPkt());
+	}
+
+	while (free_pkt_head != NULL) {
+		delete popFreePkt();
+	}
 }

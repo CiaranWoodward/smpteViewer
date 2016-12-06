@@ -3,11 +3,12 @@
 #undef main
 
 #include "imagePacker.h"
+#include <string>
 
 class windowManager
 {
 public:
-	windowManager();
+	windowManager(std::string filepath);
 	void start();
 	~windowManager();
 

@@ -10,7 +10,8 @@
 
 #define pixelBufferSize xDim*yDim*2
 
-windowManager::windowManager()
+windowManager::windowManager(std::string filepath):
+	mImagePacker(filepath)
 {
 	if (SDL_Init(SDL_INIT_VIDEO)) {
 		logerror("Could not initialize SDL");
@@ -81,8 +82,7 @@ void windowManager::start()
 			SDL_DestroyRenderer(renderer);
 			SDL_DestroyWindow(screen);
 			SDL_Quit();
-			exit(0);
-			break;
+			return;
 		default:
 			break;
 		}

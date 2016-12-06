@@ -1,11 +1,12 @@
 #pragma once
 #include <stdint.h>
 #include "packetGetter.h"
+#include <string>
 
 class imagePacker
 {
 public:
-	imagePacker();
+	imagePacker(std::string & filepath);
 	void init(int width, int height);
 	uint8_t* getNextPixels();
 	~imagePacker();
