@@ -1,5 +1,6 @@
 #include "windowManager.h"
 #include "debugUtil.h"
+#include "smpteForwarder.h"
 #include <iostream>
 #include <string>
 
@@ -22,6 +23,10 @@ int main() {
 			std::cin >> input;
 			windowManager gui(input);
 			gui.start();
+		}
+		else if (input.compare("fwd") == 0) {
+			smpteForwarder fwdr("none");
+			fwdr.start();
 		}
 		else if (input.compare("exit") == 0) {
 			return 0;

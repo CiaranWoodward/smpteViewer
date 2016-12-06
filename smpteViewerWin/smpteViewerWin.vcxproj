@@ -133,6 +133,7 @@
     <ClInclude Include="imagePacker.h" />
     <ClInclude Include="packetGetter.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="smpteForwarder.h" />
     <ClInclude Include="windowManager.h" />
   </ItemGroup>
   <ItemGroup>
@@ -144,6 +145,7 @@
     <ClCompile Include="packetGetter.cpp">
       <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</MultiProcessorCompilation>
     </ClCompile>
+    <ClCompile Include="smpteForwarder.cpp" />
     <ClCompile Include="windowManager.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
