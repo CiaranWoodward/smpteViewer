@@ -1,6 +1,7 @@
 #include <thread>
 #include <condition_variable>
 #include <mutex>
+#include <atomic>
 
 #include "packetGetter.h"
 
@@ -12,13 +13,18 @@ struct pkt_ll * pkt_tail;
 std::condition_variable pkt_head_cv;
 std::mutex pkt_head_mutex;
 
+//Stash is for single threaded use only
+struct pkt_ll * stash_pkt_head = NULL;
+struct pkt_ll * stash_pkt_tail = NULL;
+
 struct pkt_ll * free_pkt_head;
 std::condition_variable free_pkt_head_cv;
 std::mutex free_pkt_head_mutex;
 
+std::atomic_bool reset = false;
+
 
 packetGetter::packetGetter() :
-	instr("C:\\Users\\cw15g13\\pcap_in.pcap", std::ios::in | std::ios::binary),
 	iothread(&sFillBuffer, this)
 {
 	free_pkt_head = NULL;
@@ -44,14 +50,27 @@ pkt_ll * packetGetter::getNextPacket()
 		curPkt = popPkt();
 
 		if (curPkt->pkt[45] == (prevPacketSeq + 1) % 256) {
-			prevPacketSeq++;
+			prevPacketSeq = (prevPacketSeq + 1) % 256;
 			found = true;
 		}
 		else {
-			//TODO: Don't add it right to the back of the queue
-			putPkt(curPkt);
+			putStash(curPkt);
+		}
+
+		if (curPkt->isEOF) {
+			popStash();
+			while (pkt_head != NULL) {
+				curPkt = popPkt();
+				freePkt(curPkt);
+			}
+			isLocked = false;
+			prevPacketSeq = 0;
+			reset = false;
+			return NULL;
 		}
 	}
+
+	popStash();
 
 	//Return the next packet, or if all hope is lost, skip the rest of this frame and start the next one (yes, this is overly aggressive)
 	if (found) {
@@ -96,35 +115,76 @@ void packetGetter::sFillBuffer(packetGetter * const context)
 
 void packetGetter::fillBuffer()
 {
-	while (!instr) std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-	uint8_t header[24];
-	instr.seekg(0, std::ios::beg);
-	instr.read((char *) header, 24);
-	if(!(header[0] == 0xd4 &&
-		header[1] == 0xc3 &&
-		header[2] == 0xb2 &&
-		header[3] == 0xa1))
-	{
-		return;	//Not a valid pcap file
-	}
 	while (1) {
-		struct pkt_ll * tempPkt = popFreePkt();
+		std::ifstream instr = std::ifstream("C:\\Users\\cw15g13\\pcap_in.pcap", std::ios::in | std::ios::binary);
+		while (reset) (void)0;
 
-		//Fill packet
-		instr.read((char *)header, 16);
-		uint32_t length = ((uint32_t)header[8]) | (((uint32_t)header[9]) << 8) | (((uint32_t)header[10]) << 16 )| (((uint32_t)header[11]) << 24);
-		if (length != 1438) {
-			instr.ignore(length, EOF);
+		uint8_t header[24];
+		instr.seekg(0, std::ios::beg);
+		instr.read((char *)header, 24);
+		if (!(header[0] == 0xd4 &&
+			header[1] == 0xc3 &&
+			header[2] == 0xb2 &&
+			header[3] == 0xa1))
+		{
+			return;	//Not a valid pcap file
 		}
-		else {
-			instr.read((char *)tempPkt->pkt, length);
+		while (1) {
+			struct pkt_ll * tempPkt = popFreePkt();
+
+			//Fill packet
+			instr.read((char *)header, 16);
+			uint32_t length = ((uint32_t)header[8]) | (((uint32_t)header[9]) << 8) | (((uint32_t)header[10]) << 16) | (((uint32_t)header[11]) << 24);
+			if (length != 1438) {
+				instr.ignore(length, EOF);
+			}
+			else {
+				instr.read((char *)tempPkt->pkt, length);
+			}
+
+			if (instr.eof() || instr.fail()) {
+				reset = true;
+				tempPkt->next = NULL;
+				tempPkt->isEOF = true;
+				putPkt(tempPkt);
+				break;
+			}
+
+			tempPkt->isEOF = false;
+			tempPkt->next = NULL;
+
+			putPkt(tempPkt);
 		}
-
-		tempPkt->next = NULL;
-
-		putPkt(tempPkt);
 	}
+}
+
+void packetGetter::putStash(pkt_ll * packet) {
+	if (stash_pkt_head == NULL) {
+		stash_pkt_head = packet;
+	}
+	else {
+		stash_pkt_tail->next = packet;
+	}
+	stash_pkt_tail = packet;
+}
+
+void packetGetter::popStash() {
+	if (stash_pkt_head == NULL) return;
+
+	pkt_head_mutex.lock();
+	if (pkt_head == NULL) {
+		pkt_head = stash_pkt_head;
+		pkt_tail = stash_pkt_tail;
+	}
+	else {
+		stash_pkt_tail->next = pkt_head;
+		pkt_head = stash_pkt_head;
+	}
+
+	stash_pkt_head = NULL;
+	stash_pkt_tail = NULL;
+	pkt_head_mutex.unlock();
+	pkt_head_cv.notify_one();
 }
 
 void packetGetter::putPkt(pkt_ll * packet)
@@ -177,5 +237,4 @@ pkt_ll * packetGetter::popPkt()
 
 packetGetter::~packetGetter()
 {
-	instr.close();
 }

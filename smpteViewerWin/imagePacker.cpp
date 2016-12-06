@@ -18,6 +18,7 @@ void imagePacker::init(int width, int height)
 
 uint8_t * imagePacker::getNextPixels()
 {
+	bool exit = false;
 	bool processingRemaining = true;
 	int curSDIDataCount = 0;
 	int ignoreDectets = 0;
@@ -30,6 +31,7 @@ uint8_t * imagePacker::getNextPixels()
 	uint8_t bitOffset = 0;
 	while (processingRemaining) {
 		pkt_ll * pkt = mPacketGetter.getNextPacket();
+		if (pkt == NULL) break; //Drop frame
 		uint8_t * packet = pkt->pkt;
 		if (packet[43] & 0x80) processingRemaining = false; //Marker is set, final packet of frame
 		int curOffset = 62;

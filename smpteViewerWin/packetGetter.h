@@ -9,6 +9,7 @@
 struct pkt_ll {
 	uint8_t pkt[PACKETSIZE];
 	pkt_ll * next;
+	bool isEOF;
 };
 
 class packetGetter
@@ -22,13 +23,14 @@ private:
 	void lockFirstFrame();
 	static void sFillBuffer(packetGetter * const context);
 	void fillBuffer();
+	void putStash(pkt_ll * packet);
+	void popStash();
 	void putPkt(pkt_ll * packet);
 	void freePkt(pkt_ll * packet);
 	pkt_ll * popFreePkt();
 	pkt_ll * popPkt();
 	bool isLocked = false;
 	int prevPacketSeq = 0;
-	std::ifstream instr;
 	std::thread iothread;
 	int curPackNo = 0;
 };
