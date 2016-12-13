@@ -21,7 +21,6 @@ windowManager::windowManager(std::string filepath):
 
 void windowManager::start()
 {
-	pixels = (uint8_t *) malloc(pixelBufferSize);
 	screen = SDL_CreateWindow(
 		"SMPTE-2022 viewer",
 		SDL_WINDOWPOS_UNDEFINED,

@@ -71,6 +71,10 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>H:\Documents\gdp26\third_party\SDL2-devel-2.0.5-VC\SDL2-2.0.5\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -87,11 +91,13 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>H:\Documents\gdp26\data;H:\Documents\gdp26\third_party\SDL2-devel-2.0.5-VC\SDL2-2.0.5\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Working\SDL2-2.0.5\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BasicRuntimeChecks />
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
+      <AdditionalLibraryDirectories>D:\Working\SDL2-2.0.5\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -120,14 +126,6 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <None Include="SDL2.dll" />
-  </ItemGroup>
-  <ItemGroup>
-    <Library Include="..\..\third_party\SDL2-devel-2.0.5-VC\SDL2-2.0.5\lib\x64\SDL2.lib" />
-    <Library Include="..\..\third_party\SDL2-devel-2.0.5-VC\SDL2-2.0.5\lib\x64\SDL2main.lib" />
-    <Library Include="..\..\third_party\SDL2-devel-2.0.5-VC\SDL2-2.0.5\lib\x64\SDL2test.lib" />
-  </ItemGroup>
   <ItemGroup>
     <ClInclude Include="debugUtil.h" />
     <ClInclude Include="imagePacker.h" />

@@ -15,14 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="SDL2.dll" />
-  </ItemGroup>
-  <ItemGroup>
-    <Library Include="..\..\third_party\SDL2-devel-2.0.5-VC\SDL2-2.0.5\lib\x64\SDL2.lib" />
-    <Library Include="..\..\third_party\SDL2-devel-2.0.5-VC\SDL2-2.0.5\lib\x64\SDL2main.lib" />
-    <Library Include="..\..\third_party\SDL2-devel-2.0.5-VC\SDL2-2.0.5\lib\x64\SDL2test.lib" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
