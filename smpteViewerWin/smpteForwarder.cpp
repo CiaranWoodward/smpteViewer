@@ -4,13 +4,15 @@
 #include <stdlib.h>
 #include <chrono>
 #include <thread>
-#include <malloc.h>
 
 #ifdef __WINDOWS__
 #include <winsock2.h>
 #include <Ws2tcpip.h>
 #else
+#include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
 #endif
 
 #define SMPTE_2022_PACKET_LENGTH 1438
@@ -18,10 +20,6 @@
 smpteForwarder::smpteForwarder(std::string ipStr, std::string portStr, std::string filepath):
 	mPacketGetter(filepath)
 {
-	if (SDL_Init(SDL_INIT_VIDEO)) {
-		logerror("Could not initialize SDL");
-		exit(1);
-	}
 	this->portStr = portStr;
 	port = std::stoi(portStr);
 	ipAddr = ipStr;
@@ -29,24 +27,6 @@ smpteForwarder::smpteForwarder(std::string ipStr, std::string portStr, std::stri
 
 void smpteForwarder::start()
 {
-	screen = SDL_CreateWindow(
-		"Forwarding...",
-		SDL_WINDOWPOS_UNDEFINED,
-		SDL_WINDOWPOS_UNDEFINED,
-		640,
-		480,
-		0
-	);
-	if (!screen) {
-		logerror("SDL: Could not create window");
-		exit(1);
-	}
-
-	renderer = SDL_CreateRenderer(screen, -1, 0);
-	if (!renderer) {
-		logerror("SDL: Could not create renderer");
-		exit(1);
-	}
 
 #ifdef __WINDOWS__
 	SOCKET mSocket;
@@ -129,8 +109,6 @@ void smpteForwarder::start()
 
 	while (1) {
 
-		SDL_RenderPresent(renderer);
-
 		uint32_t curTime = 0;
 		curTime += ((uint32_t)curPkt->pkt[46]) << 24;
 		curTime += ((uint32_t)curPkt->pkt[47]) << 16;
@@ -166,7 +144,7 @@ void smpteForwarder::start()
 		bool retry = true;
 		while (retry) {
 			retry = false;
-			if (sendto(sockfd, &mbuf, sizeof(struct msgbuf), 0, mSockAddr, salen) < 0) {
+			if (sendto(sockfd, (curPkt->pkt + 42), SMPTE_2022_PACKET_LENGTH, 0, &mSockAddr, salen) < 0) {
 				/* buffers aren't available locally at the moment,
 				* try again.
 				*/
@@ -189,29 +167,12 @@ void smpteForwarder::start()
 			int millis = std::chrono::duration_cast<std::chrono::milliseconds>(next - begin).count();
 
 			printf("Total millis to run: %d", millis);
-
-			SDL_DestroyTexture(texture);
-			SDL_DestroyRenderer(renderer);
-			SDL_DestroyWindow(screen);
-			SDL_Quit();
 			return;
 		}
 
-		SDL_PollEvent(&event);
-		switch (event.type) {
-		case SDL_QUIT:
-			SDL_DestroyTexture(texture);
-			SDL_DestroyRenderer(renderer);
-			SDL_DestroyWindow(screen);
-			SDL_Quit();
-			return;
-		default:
-			break;
-		}
 	}
 }
 
 smpteForwarder::~smpteForwarder()
 {
-	SDL_Quit();
 }
