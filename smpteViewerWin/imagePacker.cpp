@@ -1,4 +1,5 @@
 #include "imagePacker.h"
+#include "debugUtil.h"
 #include <stdlib.h>
 
 static uint8_t counter, counterColour = 0;
@@ -9,11 +10,45 @@ imagePacker::imagePacker(std::string & filepath):
 	pixelBuf = NULL;
 }
 
-void imagePacker::init(int width, int height)
+void imagePacker::init(int *width, int *height)
 {
-	this->width = width;
-	this->height = height;
-	this->pixelBufLen = width * height * 2;
+
+	pkt_ll * pkt = mPacketGetter.getNextPacket();
+	
+	if ((pkt->pkt[43] & 0x7F) == 98) {	//Make sure is valid SMPTE2022-6 packet (yes, this is a very loose check)
+		mMetadata.frate = (pkt->pkt[59] & 0x0F) << 4;
+		mMetadata.frate += (pkt->pkt[60] & 0xF0) >> 4;
+
+		mMetadata.sample = (pkt->pkt[60] & 0x0F);
+
+		mMetadata.frame = (pkt->pkt[58] & 0x0F) << 4;
+		mMetadata.frame += (pkt->pkt[59] & 0xF0) >> 4;
+
+		mMetadata.map = (pkt->pkt[58] & 0xF0) >> 4;
+	}
+	else {
+		logerror("Not pure SMPTE2022 file - aborted");
+		*width = 0;
+		*height = 0;
+		return;
+	}
+
+	if (mMetadata.frame == 0x10) {
+		this->width = 720;
+		this->height = 486;
+		isInterlaced = true;
+	}
+	else {
+		logerror("Currently unsupported sdi format - aborted");
+		*width = 0;
+		*height = 0;
+		return;
+	}
+
+	mPacketGetter.returnPacket(pkt);
+	*width = this->width;
+	*height = this->height;
+	this->pixelBufLen = this->width * this->height * 2;
 	pixelBuf = (uint8_t *)malloc(pixelBufLen);
 }
 
@@ -117,21 +152,23 @@ uint8_t * imagePacker::getNextPixels()
 			int pixelIndex = curSDIDataCount;
 			pixelIndex += (curSDIDataCount % 2) ? -1 : 1;
 
-			int pixelRow = pixelIndex / (width * 2);
-			int pixelOffset = pixelIndex - (pixelRow * (width * 2));
-			//pixelRow *= 2;
+			if (isInterlaced) {
+				int pixelRow = pixelIndex / (width * 2);
+				int pixelOffset = pixelIndex - (pixelRow * (width * 2));
+				//pixelRow *= 2;
 
-			if (interleaved) {
-				pixelRow -= height/2;
-				pixelRow *= 2;
-				pixelRow += 1;
-			}
-			else {
-				pixelRow *= 2;
-			}
+				if (interleaved) {
+					pixelRow -= height / 2;
+					pixelRow *= 2;
+					pixelRow += 1;
+				}
+				else {
+					pixelRow *= 2;
+				}
 
-			pixelIndex = pixelRow * width * 2;
-			pixelIndex += pixelOffset;
+				pixelIndex = pixelRow * width * 2;
+				pixelIndex += pixelOffset;
+			}
 
 			if (pixelIndex > pixelBufLen || pixelIndex < 0) {
 				continue;

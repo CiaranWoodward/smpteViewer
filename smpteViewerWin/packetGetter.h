@@ -23,6 +23,7 @@ public:
 	packetGetter(std::string & filepath);
 	pkt_ll * getNextPacket();
 	void releasePacket(pkt_ll * toRelease);
+	void returnPacket(pkt_ll * toReturn);
 	~packetGetter();
 private:
 	void lockFirstFrame();

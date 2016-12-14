@@ -13,6 +13,8 @@ public:
 	~windowManager();
 
 private:
+	int xDim;
+	int yDim;
 	SDL_Window *screen;
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;

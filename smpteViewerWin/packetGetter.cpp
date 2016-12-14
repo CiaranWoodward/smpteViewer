@@ -73,6 +73,13 @@ void packetGetter::releasePacket(pkt_ll * toRelease)
 	freePkt(toRelease);
 }
 
+void packetGetter::returnPacket(pkt_ll * toReturn)
+{
+	if (toReturn == NULL) return;
+	prevPacketSeq--;
+	putPkt(toReturn);
+}
+
 
 //TODO: Current limitation -For the first frame, if any frame packets are received before the TRS preamble, they will be lost
 void packetGetter::lockFirstFrame()

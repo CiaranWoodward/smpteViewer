@@ -5,9 +5,6 @@
 #include <chrono>
 #include <thread>
 
-#define xDim 720
-#define yDim 486
-
 #define pixelBufferSize xDim*yDim*2
 
 windowManager::windowManager(std::string filepath):
@@ -21,6 +18,10 @@ windowManager::windowManager(std::string filepath):
 
 void windowManager::start()
 {
+	mImagePacker.init(&xDim, &yDim);
+
+	if (xDim == 0 || yDim == 0) return;
+
 	screen = SDL_CreateWindow(
 		"SMPTE-2022 viewer",
 		SDL_WINDOWPOS_UNDEFINED,
@@ -52,8 +53,6 @@ void windowManager::start()
 		logerror("SDL: Could not create texture");
 		exit(1);
 	}
-
-	mImagePacker.init(xDim, yDim);
 
 	std::chrono::time_point<std::chrono::steady_clock> prev = std::chrono::high_resolution_clock::now();
 	std::chrono::time_point<std::chrono::steady_clock> now;
