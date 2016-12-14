@@ -61,7 +61,6 @@ uint8_t * imagePacker::getNextPixels()
 			}
 
 			//Remove any special data
-			//TODO: remove TLV data
 			//TODO: Sync to frame starts and edges
 			if (curDectet < 4 || curDectet > 1019 || ancStart || syncStart) {
 

@@ -25,7 +25,9 @@ int main() {
 			gui.start();
 		}
 		else if (input.compare("fwd") == 0) {
-			smpteForwarder fwdr("none");
+			std::string dstIp, dstPort, filepath;
+			std::cin >> dstIp >> dstPort >> filepath;
+			smpteForwarder fwdr(dstIp, dstPort, filepath);
 			fwdr.start();
 		}
 		else if (input.compare("exit") == 0) {

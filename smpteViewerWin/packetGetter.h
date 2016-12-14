@@ -8,7 +8,7 @@
 #include <mutex>
 #include <atomic>
 
-#define BUFSIZE 10
+#define BUFSIZE 100
 #define PACKETSIZE 1437
 
 struct pkt_ll {
