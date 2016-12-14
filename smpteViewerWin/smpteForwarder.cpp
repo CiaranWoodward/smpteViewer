@@ -5,6 +5,8 @@
 #include <chrono>
 #include <thread>
 
+#define __WINDOWS__ 1
+
 #ifdef __WINDOWS__
 #include <winsock2.h>
 #include <Ws2tcpip.h>
@@ -116,8 +118,8 @@ void smpteForwarder::start()
 		curTime += curPkt->pkt[49];
 
 		//Convert the timestamp (in terms of a 27MHz clock) to nanoseconds since origin
-		uint64_t nextTime = (uint64_t)27 * (uint64_t)(curTime - originTime);
-		nextTime /= (uint64_t) 1000;
+		uint64_t nextTime = (uint64_t)1000 * (uint64_t)(curTime - originTime);
+		nextTime /= (uint64_t) 27;
 
 		next = begin + std::chrono::nanoseconds(nextTime);
 		std::this_thread::sleep_until(next);
