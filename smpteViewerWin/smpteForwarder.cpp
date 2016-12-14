@@ -110,13 +110,17 @@ void smpteForwarder::start()
 	freeaddrinfo(ressave);
 #endif
 
-	std::chrono::time_point<std::chrono::steady_clock> begin = std::chrono::high_resolution_clock::now();
-	std::chrono::time_point<std::chrono::steady_clock> next;
+	
 
 	pkt_ll * curPkt;
 	uint32_t originTime = 0;
 	
 	curPkt = mPacketGetter.getNextPacket();
+
+	std::this_thread::sleep_for(std::chrono::seconds(1)); //Allow buffer to fill
+
+	std::chrono::time_point<std::chrono::steady_clock> begin = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::steady_clock> next;
 
 	originTime += ((uint32_t) curPkt->pkt[46]) << 24;
 	originTime += ((uint32_t) curPkt->pkt[47]) << 16;
