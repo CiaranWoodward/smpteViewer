@@ -128,8 +128,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="debugUtil.h" />
+    <ClInclude Include="imageGenerator.h" />
     <ClInclude Include="imagePacker.h" />
     <ClInclude Include="packetGetter.h" />
+    <ClInclude Include="pcapGenerator.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="smpteForwarder.h" />
     <ClInclude Include="windowManager.h" />
@@ -138,11 +140,13 @@
     <ResourceCompile Include="smpteViewerWin.rc" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="imageGenerator.cpp" />
     <ClCompile Include="imagePacker.cpp" />
     <ClCompile Include="launcher.cpp" />
     <ClCompile Include="packetGetter.cpp">
       <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</MultiProcessorCompilation>
     </ClCompile>
+    <ClCompile Include="pcapGenerator.cpp" />
     <ClCompile Include="smpteForwarder.cpp" />
     <ClCompile Include="windowManager.cpp" />
   </ItemGroup>

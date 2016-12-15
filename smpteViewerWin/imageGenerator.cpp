@@ -36,7 +36,6 @@ uint8_t * imageGenerator::getNextFrame()
 					pixels[y*yDim + x + 1] = 100; //Chroma
 				}
 			}
-
 		}
 	}
 
