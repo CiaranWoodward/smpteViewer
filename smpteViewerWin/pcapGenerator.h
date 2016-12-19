@@ -19,6 +19,7 @@ private:
 	SDL_Texture *texture;
 	SDL_Event event;
 	uint8_t* pixels;
+	std::string filepath;
 
 	imageGenerator * mImageGenerator;
 };
