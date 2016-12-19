@@ -18,22 +18,22 @@ uint8_t * imageGenerator::getNextFrame()
 
 			if (y < (yDim / 2)) {	//Top half of image
 				if (x < xDim) {
-					pixels[y*yDim + x] = 20;	//luma
-					pixels[y*yDim + x + 1] = 100; //Chroma
+					pixels[y*xDim*2 + x] = 20;	//luma
+					pixels[y*xDim*2 + x + 1] = x % 4 ? 200 : 30; //Chroma
 				}
 				else {
-					pixels[y*yDim + x] = 150;	//luma
-					pixels[y*yDim + x + 1] = 30; //Chroma
+					pixels[y*xDim*2 + x] = 150;	//luma
+					pixels[y*xDim*2 + x + 1] = x % 4 ? 30 : 200; //Chroma
 				}
 			}
 			else {	//Bottom half of image
 				if ((x/2) < (counter % xDim)) {
-					pixels[y*yDim + x] = 100;	//luma
-					pixels[y*yDim + x + 1] = 200; //Chroma
+					pixels[y*xDim*2 + x] = 100;	//luma
+					pixels[y*xDim*2 + x + 1] = 200; //Chroma
 				}
 				else {
-					pixels[y*yDim + x] = 200;	//luma
-					pixels[y*yDim + x + 1] = 100; //Chroma
+					pixels[y*xDim*2 + x] = 200;	//luma
+					pixels[y*xDim*2 + x + 1] = 100; //Chroma
 				}
 			}
 		}
