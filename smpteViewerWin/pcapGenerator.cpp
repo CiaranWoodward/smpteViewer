@@ -4,6 +4,12 @@
 #include <chrono>
 
 #define PACKETSIZE 1437
+#define CLOCKSPEED 27000000.0
+#define CLOCKPERIOD ( 1.0 / (CLOCKSPEED))
+
+#define BLANKLUMA 0x040
+#define BLANKCHROMA 0x200
+
 
 pcapGenerator::pcapGenerator(int mode, int timeSec, std::string filepath)
 {
@@ -73,7 +79,7 @@ void pcapGenerator::start()
 	uint8_t pkt[PACKETSIZE];
 	memcpy(pkt, pktHeader, pktHeaderLength);
 
-	unsigned long long int curDectet = 0;
+	unsigned long long int curDectetCount = 0;
 
 	std::chrono::time_point<std::chrono::steady_clock> startTime = std::chrono::high_resolution_clock::now();
 
@@ -86,9 +92,21 @@ void pcapGenerator::start()
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
 		SDL_RenderPresent(renderer);
 
+		//TODO: Pcap packet header
+
 		//process image into packets and write to file
-		
+		bool isBlanking = true;
+		bool blankLumaToggle = false;
+		uint16_t curDectet;
 		while (curPixel < numPixels) {
+
+			if (isBlanking) {
+				curDectet = blankLumaToggle ? BLANKLUMA: BLANKCHROMA;
+				blankLumaToggle = !blankLumaToggle;
+			}
+			else {
+				//TODO: insert actual video data
+			}
 
 		}
 
