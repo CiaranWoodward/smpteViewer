@@ -1,6 +1,7 @@
 #include "pcapGenerator.h"
 #include "debugUtil.h"
 #include <fstream>
+#include <chrono>
 
 #define PACKETSIZE 1437
 
@@ -10,6 +11,7 @@ pcapGenerator::pcapGenerator(int mode, int timeSec, std::string filepath)
 	if (mode == 1) {
 		xDim = 720;
 		yDim = 486;
+		numPixels = xDim * yDim * 2;
 		mImageGenerator = new imageGenerator(xDim, yDim);
 	}
 }
@@ -53,12 +55,12 @@ void pcapGenerator::start()
 
 	uint8_t header[24] = { 
 						0xd4, 0xc3, 0xb2, 0xa1, //magic number
-						0x00, 0x02,	//major version
-						0x00, 0x04, //minor version
+						0x02, 0x00,	//major version
+						0x04, 0x00, //minor version
 						0x00, 0x00, 0x00, 0x00, //GMT to local time correction
 						0x00, 0x00, 0x00, 0x00, //sigfigs
-						0x00, 0x00, 0xff, 0xff, //snaplen
-						0x00, 0x00, 0x00, 0x01  //ethernet
+						0xFF, 0xFF, 0x00, 0x00, //snaplen
+						0x01, 0x00, 0x00, 0x00  //ethernet
 	};
 	outstr.write((char *)header, 24);
 
@@ -73,7 +75,11 @@ void pcapGenerator::start()
 
 	unsigned long long int curDectet = 0;
 
+	std::chrono::time_point<std::chrono::steady_clock> startTime = std::chrono::high_resolution_clock::now();
+
 	while (1) {
+		uint32_t curPixel = 0;
+		uint32_t curPacketByte = pktHeaderLength;
 		pixels = mImageGenerator->getNextFrame();
 
 		SDL_UpdateTexture(texture, NULL, pixels, xDim * 2);
@@ -81,7 +87,10 @@ void pcapGenerator::start()
 		SDL_RenderPresent(renderer);
 
 		//process image into packets and write to file
+		
+		while (curPixel < numPixels) {
 
+		}
 
 		SDL_PollEvent(&event);
 		switch (event.type) {

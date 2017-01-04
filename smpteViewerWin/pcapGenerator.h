@@ -14,6 +14,7 @@ public:
 private:
 	int xDim;
 	int yDim;
+	int numPixels;
 	SDL_Window *screen;
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;
