@@ -3,7 +3,6 @@
 #include <fstream>
 #include <chrono>
 
-#define PACKETSIZE 1437
 #define CLOCKSPEED 27000000.0
 #define CLOCKPERIOD ( 1.0 / (CLOCKSPEED))
 
@@ -19,6 +18,10 @@ pcapGenerator::pcapGenerator(int mode, int timeSec, std::string filepath)
 		yDim = 486;
 		numPixels = xDim * yDim * 2;
 		mImageGenerator = new imageGenerator(xDim, yDim);
+		dectetsPerFrame = 900900; //(CLOCKSPEED) / (30/1.001)
+		dectetsPerLine = 1716;
+		hBlankLen = 276 - (4 * 2); //subtract the length of the EAV and SAV markers 
+		isInterlaced = true;
 	}
 }
 
@@ -70,18 +73,17 @@ void pcapGenerator::start()
 	};
 	outstr.write((char *)header, 24);
 
-	const uint8_t pktHeaderLength = 42;
 	uint8_t pktHeader[pktHeaderLength] = { 0x01, 0x00, 0x5e, 0x00, 0x27, 0x7a, 0x40, 0xa3, 0x6b, 0xa0, 0x01, 0xfe, 0x08, 0x00, 0x45, 0x02, 0x05, 0x90, 0x00, 0x00, 0x40, 0x00, 0x40, 0x11, 0x36, 0xbe, 0xc0, 0xa8, 0x27, 0x7a, 0xef, 0x00, 0x27, 0x7a, 0x27, 0x10, 0x4e, 0x20, 0x05, 0x7c, 0x00, 0x00 };
 	
-	const uint8_t rtpHeaderLength = 12;
-	const uint8_t hbrmHeaderLength = 8;
-
-	uint8_t pkt[PACKETSIZE];
+	memset(pkt, 0, PACKETSIZE);
 	memcpy(pkt, pktHeader, pktHeaderLength);
+	pktCursor = pktHeaderLength + rtpHeaderLength + hbrmHeaderLength;
 
 	unsigned long long int curDectetCount = 0;
 
 	std::chrono::time_point<std::chrono::steady_clock> startTime = std::chrono::high_resolution_clock::now();
+
+	int numVblankLines = (dectetsPerFrame / dectetsPerLine) - yDim;
 
 	while (1) {
 		uint32_t curPixel = 0;
@@ -92,7 +94,7 @@ void pcapGenerator::start()
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
 		SDL_RenderPresent(renderer);
 
-		//TODO: Pcap packet header
+		uint32_t hblanklen;
 
 		//process image into packets and write to file
 		bool isBlanking = true;
@@ -124,6 +126,80 @@ void pcapGenerator::start()
 	}
 }
 
+void pcapGenerator::pushPacket()
+{
+	//TODO: write Pcap packet header
+	//TODO: write to file
+
+	//reset cursor zero the data section of packet ready for next filling
+	pktCursor = pktHeaderLength + rtpHeaderLength + hbrmHeaderLength;
+	memset(pkt + pktCursor, 0, PACKETSIZE - pktCursor);
+}
+
+void pcapGenerator::pushDectet(uint16_t dectet)
+{
+	uint8_t toInsert[2] = { 0 }; //TODO: Fill this
+
+	for (int i = 0; i < 2; i++) {
+		if (pktCursor < PACKETSIZE) {
+			//TODO: Put toInsert[i] in this packet (using bitwise or)
+		}
+		else {
+			//TODO: send current packet to file
+		}
+	}
+}
+
+void pcapGenerator::pushSAV(bool f, bool v)
+{
+	pushDectet(0x3FF);
+	pushDectet(0);
+	pushDectet(0);
+	uint16_t xyz = 0;
+	if (f) {
+		if (v) {
+			      //1fvhpppp00
+			xyz = 0b1110110000;
+		}
+		else {
+			xyz = 0b1100011100;
+		}
+	}
+	else {
+		if (v) {
+			xyz = 0b1010101100;
+		}
+		else {
+			xyz = 0b1000000000;
+		}
+	}
+	pushDectet(xyz);
+}
+
+void pcapGenerator::pushEAV(bool f, bool v)
+{
+	pushDectet(0x3FF);
+	pushDectet(0);
+	pushDectet(0);
+	uint16_t xyz = 0;
+	if (f) {
+		if (v) {
+			xyz = 0b1111000100;
+		}
+		else {
+			xyz = 0b1101101000;
+		}
+	}
+	else {
+		if (v) {
+			xyz = 0b1011011000;
+		}
+		else {
+			xyz = 0b1001110100;
+		}
+	}
+	pushDectet(xyz);
+}
 
 pcapGenerator::~pcapGenerator()
 {
