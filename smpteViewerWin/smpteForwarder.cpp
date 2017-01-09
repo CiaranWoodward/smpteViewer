@@ -5,9 +5,7 @@
 #include <chrono>
 #include <thread>
 
-#define __WINDOWS__ 1
-
-#ifdef __WINDOWS__
+#ifdef _WIN64
 #include <winsock2.h>
 #include <Ws2tcpip.h>
 #else
@@ -30,7 +28,7 @@ smpteForwarder::smpteForwarder(std::string ipStr, std::string portStr, std::stri
 void smpteForwarder::start()
 {
 
-#ifdef __WINDOWS__
+#ifdef _WIN64
 	SOCKET mSocket;
 	WSADATA wsa;
 	struct sockaddr_in si_other;
@@ -125,7 +123,7 @@ void smpteForwarder::start()
 		std::this_thread::sleep_until(next);
 
 		//Forward packet
-#ifdef __WINDOWS__
+#ifdef _WIN64
 		//TODO: 42 is magic number which cuts out all of the existing ethernet and UDP header
 		bool retry = true;
 		while (retry) {

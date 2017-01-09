@@ -10,7 +10,8 @@
 #define BLANKCHROMA 0x200
 
 
-pcapGenerator::pcapGenerator(int mode, int timeSec, std::string filepath)
+pcapGenerator::pcapGenerator(int mode, int timeSec, std::string filepath) :
+	bitOffset(0)
 {
 	this->filepath = filepath;
 	if (mode == 1) {
@@ -133,20 +134,37 @@ void pcapGenerator::pushPacket()
 
 	//reset cursor zero the data section of packet ready for next filling
 	pktCursor = pktHeaderLength + rtpHeaderLength + hbrmHeaderLength;
+	bitOffset = 0;
 	memset(pkt + pktCursor, 0, PACKETSIZE - pktCursor);
 }
 
 void pcapGenerator::pushDectet(uint16_t dectet)
 {
-	uint8_t toInsert[2] = { 0 }; //TODO: Fill this
+	uint8_t toInsert[2]; 
+	uint8_t mask[2]; 
+
+	mask[0] = 0xFF >> bitOffset;
+	mask[1] = 0xFF << (6 - bitOffset);
+
+	toInsert[0] = (dectet >> (2 + bitOffset)) & mask[0];
+	toInsert[1] = (dectet << (6 - bitOffset)) & mask[1];
 
 	for (int i = 0; i < 2; i++) {
 		if (pktCursor < PACKETSIZE) {
-			//TODO: Put toInsert[i] in this packet (using bitwise or)
+			//Put toInsert[i] in this packet (using bitwise or so as to not disrupt existing data)
+			pkt[pktCursor] |= toInsert[i];
+			if (mask[i] & 0x01) pktCursor++;
 		}
 		else {
-			//TODO: send current packet to file
+			pushPacket();
+			i--;
 		}
+	}
+
+	bitOffset += 2;
+	if (bitOffset == 8) {
+		bitOffset = 0;
+		pktCursor++;
 	}
 }
 

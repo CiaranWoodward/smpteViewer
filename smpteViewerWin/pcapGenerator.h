@@ -26,6 +26,7 @@ private:
 	long int dectetsPerLine;
 
 	unsigned int pktCursor;
+	uint8_t bitOffset;
 	uint8_t pkt[PACKETSIZE];
 
 	bool isInterlaced;
