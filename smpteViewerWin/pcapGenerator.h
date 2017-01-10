@@ -4,8 +4,9 @@
 
 #include "imageGenerator.h"
 #include <string>
+#include <fstream>
 
-#define PACKETSIZE 1437
+#define PACKETSIZE 1438
 
 const uint8_t pktHeaderLength = 42;
 const uint8_t rtpHeaderLength = 12;
@@ -24,6 +25,8 @@ private:
 	int hBlankLen;
 	long int dectetsPerFrame;
 	long int dectetsPerLine;
+
+	unsigned long int maxFrames;
 
 	unsigned long int curFrameCount;
 	uint16_t sequenceNumber;

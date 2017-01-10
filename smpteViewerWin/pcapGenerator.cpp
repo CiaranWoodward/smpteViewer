@@ -1,9 +1,8 @@
 #include "pcapGenerator.h"
 #include "debugUtil.h"
-#include <fstream>
 #include <time.h>
 
-#define CLOCKSPEED 27000000.0
+#define CLOCKSPEED 27000000
 #define CLOCKPERIOD ( 1.0 / (CLOCKSPEED))
 
 #define BLANKLUMA 0x040
@@ -29,6 +28,7 @@ pcapGenerator::pcapGenerator(int mode, int timeSec, std::string filepath) :
 		dectetsPerLine = 1716;
 		hBlankLen = 276 - (4 * 2); //subtract the length of the EAV and SAV markers 
 		isInterlaced = true;
+		maxFrames = timeSec * 30; //WARN: Doesn't take the 1.001 into account
 	}
 }
 
@@ -103,8 +103,6 @@ void pcapGenerator::start()
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
 		SDL_RenderPresent(renderer);
 
-		uint32_t hblanklen;
-
 		//process image into packets and write to file
 		//TODO: modify to also do non-interlaced video
 
@@ -122,7 +120,7 @@ void pcapGenerator::start()
 			pushVerticalBlankingLine();
 		}
 
-		//TODO: Video data evens
+		//Video data evens
 		for (int i = 0; i < (yDim-1); i += 2) {
 			pushEAV(false, false);
 			pushHorizBlankData();
@@ -152,7 +150,7 @@ void pcapGenerator::start()
 			pushVerticalBlankingLine();
 		}
 
-		//TODO: Video data odds
+		// Video data odds
 		for (int i = 1; i < (yDim - 1); i += 2) {
 			pushEAV(true, false);
 			pushHorizBlankData();
@@ -178,6 +176,14 @@ void pcapGenerator::start()
 		pkt[43] |= 0x80; //Set marker to signal final packet for this frame
 		pushPacket();
 		curFrameCount++;
+		
+		if (curFrameCount > maxFrames) {
+			SDL_DestroyTexture(texture);
+			SDL_DestroyRenderer(renderer);
+			SDL_DestroyWindow(screen);
+			SDL_Quit();
+			return;
+		}
 
 		SDL_PollEvent(&event);
 		switch (event.type) {
@@ -219,12 +225,12 @@ void pcapGenerator::pushPacket()
 		0x00, 0x00, 0x00, 0x00 //Original Packet Length
 	};
 
-	unsigned long long int nanos = (unsigned long long int)((double) curDectetCount * CLOCKPERIOD));
+	unsigned long long int nanos = (unsigned long long int)((curDectetCount * 1000) / (CLOCKSPEED/1000000));
 	const unsigned long long int bil = 1000000000;
 
-	uint32_t secs = nanos / bil;
-	uint32_t uSecs = nanos - (secs * bil);
-	secs += startTime;
+	unsigned long long int secs = (nanos / bil);
+	unsigned long long int uSecs = (nanos - (secs * bil));
+	//secs += startTime;
 
 	PUTLE32(secs, (header));
 	PUTLE32(uSecs, (header + 4));
@@ -269,6 +275,8 @@ void pcapGenerator::pushDectet(uint16_t dectet)
 		bitOffset = 0;
 		pktCursor++;
 	}
+
+	curDectetCount++;
 }
 
 void pcapGenerator::pushVerticalBlankingLine()
