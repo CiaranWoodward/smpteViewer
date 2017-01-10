@@ -41,6 +41,8 @@ private:
 	void resetPacket();
 	void pushPacket();
 	void pushDectet(uint16_t dectet);
+	void pushVerticalBlankingLine();
+	void pushHorizBlankData();
 	void pushSAV(bool f, bool v);
 	void pushEAV(bool f, bool v);
 

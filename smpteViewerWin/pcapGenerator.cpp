@@ -106,19 +106,47 @@ void pcapGenerator::start()
 		uint32_t hblanklen;
 
 		//process image into packets and write to file
-		bool isBlanking = true;
-		bool blankLumaToggle = false;
-		uint16_t curDectet;
-		while (curPixel < numPixels) {
+		//TODO: modify to also do non-interlaced video
 
-			if (isBlanking) {
-				curDectet = blankLumaToggle ? BLANKLUMA: BLANKCHROMA;
-				blankLumaToggle = !blankLumaToggle;
-			}
-			else {
-				//TODO: insert actual video data
-			}
+		uint8_t vb[4];
+		vb[0] = (numVblankLines - 5) / 2;
+		vb[1] = 2;
+		vb[2] = ((numVblankLines - 5) / 2) + 1;
+		vb[3] = numVblankLines - (vb[0] + vb[1] + vb[2]);
 
+		//VB
+		for (int i = 0; i < vb[0]; i++) {
+			pushEAV(false, true);
+			pushHorizBlankData();
+			pushSAV(false, true);
+			pushVerticalBlankingLine();
+		}
+
+		//TODO: Video data evens
+
+		//VB
+		for (int i = 0; i < vb[1]; i++) {
+			pushEAV(false, true);
+			pushHorizBlankData();
+			pushSAV(false, true);
+			pushVerticalBlankingLine();
+		}
+
+		for (int i = 0; i < vb[2]; i++) {
+			pushEAV(true, true);
+			pushHorizBlankData();
+			pushSAV(true, true);
+			pushVerticalBlankingLine();
+		}
+
+		//TODO: Video data odds
+
+		//VB
+		for (int i = 0; i < vb[3]; i++) {
+			pushEAV(true, true);
+			pushHorizBlankData();
+			pushSAV(true, true);
+			pushVerticalBlankingLine();
 		}
 
 		pkt[43] |= 0x80; //Set marker to signal final packet for this frame
@@ -210,12 +238,27 @@ void pcapGenerator::pushDectet(uint16_t dectet)
 		}
 	}
 
-
-
 	bitOffset += 2;
 	if (bitOffset == 8) {
 		bitOffset = 0;
 		pktCursor++;
+	}
+}
+
+void pcapGenerator::pushVerticalBlankingLine()
+{
+	bool blankLumaToggle = false;
+	for (int i = 0; i < xDim; i++) {
+		uint16_t curDectet = blankLumaToggle ? BLANKLUMA : BLANKCHROMA;
+		pushDectet(curDectet);
+		blankLumaToggle = !blankLumaToggle;
+	}
+}
+
+void pcapGenerator::pushHorizBlankData()
+{
+	for (int i = 0; i < hBlankLen; i++) {
+		pushDectet(0x0040);
 	}
 }
 
