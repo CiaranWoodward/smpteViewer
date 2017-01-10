@@ -55,7 +55,7 @@ void windowManager::start()
 	}
 
 	std::chrono::time_point<std::chrono::steady_clock> prev = std::chrono::high_resolution_clock::now();
-	std::chrono::time_point<std::chrono::steady_clock> now;
+	int missedTimeCount = 0;
 
 	while (1) {
 
@@ -65,13 +65,17 @@ void windowManager::start()
 		SDL_RenderCopy(renderer, texture, NULL, NULL);
 		SDL_RenderPresent(renderer);
 
-		now = std::chrono::high_resolution_clock::now();
-		prev = prev + std::chrono::nanoseconds(33333333);
+		prev = prev + std::chrono::nanoseconds(33366666);
 
+		std::this_thread::sleep_until(prev);
+		/*
 		if (std::chrono::duration_cast<std::chrono::nanoseconds>(prev-now).count() > 0) {
 			std::this_thread::sleep_for(prev-now);
 		}
-		prev = now;
+		else {
+			missedTimeCount++;
+		}*/
+		prev = std::chrono::high_resolution_clock::now();;
 
 		SDL_PollEvent(&event);
 		switch (event.type) {

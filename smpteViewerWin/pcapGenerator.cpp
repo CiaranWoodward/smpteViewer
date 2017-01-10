@@ -1,6 +1,7 @@
 #include "pcapGenerator.h"
 #include "debugUtil.h"
 #include <time.h>
+#include <assert.h>
 
 #define CLOCKSPEED 27000000
 #define CLOCKPERIOD ( 1.0 / (CLOCKSPEED))
@@ -110,11 +111,12 @@ void pcapGenerator::start()
 		//process image into packets and write to file
 		//TODO: modify to also do non-interlaced video
 
-		uint8_t vb[4];
+		int vb[4];
 		vb[0] = (numVblankLines - 5) / 2;
 		vb[1] = 2;
 		vb[2] = ((numVblankLines - 5) / 2) + 1;
 		vb[3] = numVblankLines - (vb[0] + vb[1] + vb[2]);
+		assert(vb[3] >= 0);
 
 		//VB
 		for (int i = 0; i < vb[0]; i++) {
@@ -133,7 +135,7 @@ void pcapGenerator::start()
 			//Video line data
 			unsigned int offset = i * xDim * 2;
 			for (int x = 0; x < xDim; x++) {
-				unsigned int index = offset + (xDim*2);
+				unsigned int index = offset + (x * 2);
 				pushDectet(((uint16_t)pixels[index + 1]) << 2);
 				pushDectet(((uint16_t)pixels[index]) << 2);
 			}
@@ -163,7 +165,7 @@ void pcapGenerator::start()
 			//Video line data
 			unsigned int offset = i * xDim * 2;
 			for (int x = 0; x < xDim; x++) {
-				unsigned int index = offset + (xDim * 2);
+				unsigned int index = offset + (x * 2);
 				pushDectet(((uint16_t)pixels[index + 1]) << 2);
 				pushDectet(((uint16_t)pixels[index]) << 2);
 			}
@@ -179,6 +181,7 @@ void pcapGenerator::start()
 
 		pkt[43] |= 0x80; //Set marker to signal final packet for this frame
 		pushPacket();
+		bitOffset = 0;
 		pkt[43] &= (~0x80);
 		curFrameCount++;
 		
@@ -208,7 +211,6 @@ void pcapGenerator::resetPacket()
 {
 	//reset cursor zero the data section of packet ready for next filling
 	pktCursor = pktHeaderLength + rtpHeaderLength + hbrmHeaderLength;
-	bitOffset = 0;
 	memset(pkt + pktCursor, 0, PACKETSIZE - pktCursor);
 
 	//Initialise the rtp header with correct sync data
