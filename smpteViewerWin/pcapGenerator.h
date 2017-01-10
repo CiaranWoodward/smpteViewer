@@ -25,12 +25,20 @@ private:
 	long int dectetsPerFrame;
 	long int dectetsPerLine;
 
+	unsigned long int curFrameCount;
+	uint16_t sequenceNumber;
+	unsigned long long int curDectetCount;
+	unsigned long long int startTime;
+
 	unsigned int pktCursor;
 	uint8_t bitOffset;
 	uint8_t pkt[PACKETSIZE];
 
 	bool isInterlaced;
 
+	std::ofstream outstr;
+
+	void resetPacket();
 	void pushPacket();
 	void pushDectet(uint16_t dectet);
 	void pushSAV(bool f, bool v);

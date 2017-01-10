@@ -1,7 +1,7 @@
 #include "pcapGenerator.h"
 #include "debugUtil.h"
 #include <fstream>
-#include <chrono>
+#include <time.h>
 
 #define CLOCKSPEED 27000000.0
 #define CLOCKPERIOD ( 1.0 / (CLOCKSPEED))
@@ -9,9 +9,15 @@
 #define BLANKLUMA 0x040
 #define BLANKCHROMA 0x200
 
+#define PUTLE32(x,y) do{(y)[0]=((x)&0xff);(y)[1]=(((x)>>8)&0xff);(y)[2]=(((x)>>16)&0xff);(y)[3]=(((x)>>24)&0xff);}while(0)
+#define PUTLE16(x,y) do{(y)[0]=((x)&0xff);(y)[1]=(((x)>>8)&0xff);}while(0)
+
 
 pcapGenerator::pcapGenerator(int mode, int timeSec, std::string filepath) :
-	bitOffset(0)
+	bitOffset(0),
+	curDectetCount(0),
+	curFrameCount(0),
+	sequenceNumber(0)
 {
 	this->filepath = filepath;
 	if (mode == 1) {
@@ -60,8 +66,8 @@ void pcapGenerator::start()
 		exit(1);
 	}
 
-	//TODO open file and write pcap header
-	std::ofstream outstr = std::ofstream(filepath, std::ios::out | std::ios::binary | std::ios::trunc);
+	//open file and write pcap header
+	outstr = std::ofstream(filepath, std::ios::out | std::ios::binary | std::ios::trunc);
 
 	uint8_t header[24] = { 
 						0xd4, 0xc3, 0xb2, 0xa1, //magic number
@@ -74,15 +80,17 @@ void pcapGenerator::start()
 	};
 	outstr.write((char *)header, 24);
 
+	startTime = time(0);
+
 	uint8_t pktHeader[pktHeaderLength] = { 0x01, 0x00, 0x5e, 0x00, 0x27, 0x7a, 0x40, 0xa3, 0x6b, 0xa0, 0x01, 0xfe, 0x08, 0x00, 0x45, 0x02, 0x05, 0x90, 0x00, 0x00, 0x40, 0x00, 0x40, 0x11, 0x36, 0xbe, 0xc0, 0xa8, 0x27, 0x7a, 0xef, 0x00, 0x27, 0x7a, 0x27, 0x10, 0x4e, 0x20, 0x05, 0x7c, 0x00, 0x00 };
-	
+	uint8_t rtpHeader[rtpHeaderLength] = { 0x80, 0x62, 0xf8, 0x66, 0xf2, 0x93, 0xc4, 0x05, 0x12, 0x34, 0x56, 0x00 };
+	uint8_t hbrmHeader[hbrmHeaderLength] = { 0x80, 0x00, 0x00, 0x00, 0x01, 0x01, 0x71, 0x00 };
+
 	memset(pkt, 0, PACKETSIZE);
 	memcpy(pkt, pktHeader, pktHeaderLength);
+	memcpy(pkt + pktHeaderLength, rtpHeader, rtpHeaderLength);
+	memcpy(pkt + pktHeaderLength + rtpHeaderLength, hbrmHeader, hbrmHeaderLength);
 	pktCursor = pktHeaderLength + rtpHeaderLength + hbrmHeaderLength;
-
-	unsigned long long int curDectetCount = 0;
-
-	std::chrono::time_point<std::chrono::steady_clock> startTime = std::chrono::high_resolution_clock::now();
 
 	int numVblankLines = (dectetsPerFrame / dectetsPerLine) - yDim;
 
@@ -113,6 +121,10 @@ void pcapGenerator::start()
 
 		}
 
+		pkt[43] |= 0x80; //Set marker to signal final packet for this frame
+		pushPacket();
+		curFrameCount++;
+
 		SDL_PollEvent(&event);
 		switch (event.type) {
 		case SDL_QUIT:
@@ -127,15 +139,52 @@ void pcapGenerator::start()
 	}
 }
 
-void pcapGenerator::pushPacket()
+void pcapGenerator::resetPacket()
 {
-	//TODO: write Pcap packet header
-	//TODO: write to file
-
 	//reset cursor zero the data section of packet ready for next filling
 	pktCursor = pktHeaderLength + rtpHeaderLength + hbrmHeaderLength;
 	bitOffset = 0;
 	memset(pkt + pktCursor, 0, PACKETSIZE - pktCursor);
+
+	//Initialise the rtp header with correct sync data
+	PUTLE16(sequenceNumber, (pkt + 44));
+	uint32_t timestamp = curDectetCount & 0xFFFFFFFF;
+	PUTLE32(timestamp, (pkt + 46));
+
+	//Frame count into the hbrm header
+	pkt[55] = curFrameCount & 0xFF;
+}
+
+void pcapGenerator::pushPacket()
+{
+	//Form Pcap packet header
+	uint8_t header[16] = {
+		0x00, 0x00, 0x00, 0x00, //Timestamp seconds
+		0x00, 0x00, 0x00, 0x00, //Timestamp microSeconds
+		0x00, 0x00, 0x00, 0x00, //Included packet length
+		0x00, 0x00, 0x00, 0x00 //Original Packet Length
+	};
+
+	unsigned long long int nanos = (unsigned long long int)((double) curDectetCount * CLOCKPERIOD));
+	const unsigned long long int bil = 1000000000;
+
+	uint32_t secs = nanos / bil;
+	uint32_t uSecs = nanos - (secs * bil);
+	secs += startTime;
+
+	PUTLE32(secs, (header));
+	PUTLE32(uSecs, (header + 4));
+	PUTLE32(PACKETSIZE, (header + 8));
+	PUTLE32(PACKETSIZE, (header + 12));
+
+	//Write Pcap packet header
+	outstr.write((char *)header, 16);
+
+	//Write packet data
+	outstr.write((char *)pkt, PACKETSIZE);
+
+	sequenceNumber++;
+	resetPacket();
 }
 
 void pcapGenerator::pushDectet(uint16_t dectet)
@@ -160,6 +209,8 @@ void pcapGenerator::pushDectet(uint16_t dectet)
 			i--;
 		}
 	}
+
+
 
 	bitOffset += 2;
 	if (bitOffset == 8) {
