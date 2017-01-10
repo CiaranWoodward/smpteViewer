@@ -123,6 +123,19 @@ void pcapGenerator::start()
 		}
 
 		//TODO: Video data evens
+		for (int i = 0; i < (yDim-1); i += 2) {
+			pushEAV(false, false);
+			pushHorizBlankData();
+			pushSAV(false, false);
+
+			//Video line data
+			unsigned int offset = i * xDim * 2;
+			for (int x = 0; x < xDim; x++) {
+				unsigned int index = offset + (xDim*2);
+				pushDectet(((uint16_t)pixels[index + 1]) << 2);
+				pushDectet(((uint16_t)pixels[index]) << 2);
+			}
+		}
 
 		//VB
 		for (int i = 0; i < vb[1]; i++) {
@@ -140,6 +153,19 @@ void pcapGenerator::start()
 		}
 
 		//TODO: Video data odds
+		for (int i = 1; i < (yDim - 1); i += 2) {
+			pushEAV(true, false);
+			pushHorizBlankData();
+			pushSAV(true, false);
+
+			//Video line data
+			unsigned int offset = i * xDim * 2;
+			for (int x = 0; x < xDim; x++) {
+				unsigned int index = offset + (xDim * 2);
+				pushDectet(((uint16_t)pixels[index + 1]) << 2);
+				pushDectet(((uint16_t)pixels[index]) << 2);
+			}
+		}
 
 		//VB
 		for (int i = 0; i < vb[3]; i++) {
