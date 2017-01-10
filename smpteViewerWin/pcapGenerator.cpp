@@ -11,6 +11,9 @@
 #define PUTLE32(x,y) do{(y)[0]=((x)&0xff);(y)[1]=(((x)>>8)&0xff);(y)[2]=(((x)>>16)&0xff);(y)[3]=(((x)>>24)&0xff);}while(0)
 #define PUTLE16(x,y) do{(y)[0]=((x)&0xff);(y)[1]=(((x)>>8)&0xff);}while(0)
 
+#define PUTBE32(x,y) do{(y)[3]=((x)&0xff);(y)[2]=(((x)>>8)&0xff);(y)[1]=(((x)>>16)&0xff);(y)[0]=(((x)>>24)&0xff);}while(0)
+#define PUTBE16(x,y) do{(y)[1]=((x)&0xff);(y)[0]=(((x)>>8)&0xff);}while(0)
+
 
 pcapGenerator::pcapGenerator(int mode, int timeSec, std::string filepath) :
 	bitOffset(0),
@@ -84,13 +87,14 @@ void pcapGenerator::start()
 
 	uint8_t pktHeader[pktHeaderLength] = { 0x01, 0x00, 0x5e, 0x00, 0x27, 0x7a, 0x40, 0xa3, 0x6b, 0xa0, 0x01, 0xfe, 0x08, 0x00, 0x45, 0x02, 0x05, 0x90, 0x00, 0x00, 0x40, 0x00, 0x40, 0x11, 0x36, 0xbe, 0xc0, 0xa8, 0x27, 0x7a, 0xef, 0x00, 0x27, 0x7a, 0x27, 0x10, 0x4e, 0x20, 0x05, 0x7c, 0x00, 0x00 };
 	uint8_t rtpHeader[rtpHeaderLength] = { 0x80, 0x62, 0xf8, 0x66, 0xf2, 0x93, 0xc4, 0x05, 0x12, 0x34, 0x56, 0x00 };
-	uint8_t hbrmHeader[hbrmHeaderLength] = { 0x80, 0x00, 0x00, 0x00, 0x01, 0x01, 0x71, 0x00 };
+	uint8_t hbrmHeader[hbrmHeaderLength] = { 0x08, 0x00, 0x00, 0x00, 0x01, 0x01, 0x71, 0x00 };
 
 	memset(pkt, 0, PACKETSIZE);
 	memcpy(pkt, pktHeader, pktHeaderLength);
 	memcpy(pkt + pktHeaderLength, rtpHeader, rtpHeaderLength);
 	memcpy(pkt + pktHeaderLength + rtpHeaderLength, hbrmHeader, hbrmHeaderLength);
 	pktCursor = pktHeaderLength + rtpHeaderLength + hbrmHeaderLength;
+	resetPacket();
 
 	int numVblankLines = (dectetsPerFrame / dectetsPerLine) - yDim;
 
@@ -175,6 +179,7 @@ void pcapGenerator::start()
 
 		pkt[43] |= 0x80; //Set marker to signal final packet for this frame
 		pushPacket();
+		pkt[43] &= (~0x80);
 		curFrameCount++;
 		
 		if (curFrameCount > maxFrames) {
@@ -207,9 +212,9 @@ void pcapGenerator::resetPacket()
 	memset(pkt + pktCursor, 0, PACKETSIZE - pktCursor);
 
 	//Initialise the rtp header with correct sync data
-	PUTLE16(sequenceNumber, (pkt + 44));
+	PUTBE16(sequenceNumber, (pkt + 44));
 	uint32_t timestamp = curDectetCount & 0xFFFFFFFF;
-	PUTLE32(timestamp, (pkt + 46));
+	PUTBE32(timestamp, (pkt + 46));
 
 	//Frame count into the hbrm header
 	pkt[55] = curFrameCount & 0xFF;
@@ -227,9 +232,10 @@ void pcapGenerator::pushPacket()
 
 	unsigned long long int nanos = (unsigned long long int)((curDectetCount * 1000) / (CLOCKSPEED/1000000));
 	const unsigned long long int bil = 1000000000;
+	const unsigned long long int mil = 1000000;
 
 	unsigned long long int secs = (nanos / bil);
-	unsigned long long int uSecs = (nanos - (secs * bil));
+	unsigned long long int uSecs = ((nanos/1000) - (secs * mil));
 	//secs += startTime;
 
 	PUTLE32(secs, (header));
@@ -273,7 +279,6 @@ void pcapGenerator::pushDectet(uint16_t dectet)
 	bitOffset += 2;
 	if (bitOffset == 8) {
 		bitOffset = 0;
-		pktCursor++;
 	}
 
 	curDectetCount++;
@@ -282,7 +287,7 @@ void pcapGenerator::pushDectet(uint16_t dectet)
 void pcapGenerator::pushVerticalBlankingLine()
 {
 	bool blankLumaToggle = false;
-	for (int i = 0; i < xDim; i++) {
+	for (int i = 0; i < (xDim*2); i++) {
 		uint16_t curDectet = blankLumaToggle ? BLANKLUMA : BLANKCHROMA;
 		pushDectet(curDectet);
 		blankLumaToggle = !blankLumaToggle;
@@ -330,6 +335,7 @@ void pcapGenerator::pushEAV(bool f, bool v)
 	uint16_t xyz = 0;
 	if (f) {
 		if (v) {
+			      //1fvhpppp00
 			xyz = 0b1111000100;
 		}
 		else {
