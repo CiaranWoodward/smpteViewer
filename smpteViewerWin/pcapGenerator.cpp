@@ -3,9 +3,6 @@
 #include <time.h>
 #include <assert.h>
 
-#define CLOCKSPEED 27000000
-#define CLOCKPERIOD ( 1.0 / (CLOCKSPEED))
-
 #define BLANKLUMA 0x040
 #define BLANKCHROMA 0x200
 
@@ -26,13 +23,28 @@ pcapGenerator::pcapGenerator(int mode, int timeSec, std::string filepath) :
 	if (mode == 1) {
 		xDim = 720;
 		yDim = 486;
+		isHD = false;
 		numPixels = xDim * yDim * 2;
 		mImageGenerator = new imageGenerator(xDim, yDim);
-		dectetsPerFrame = 900900; //(CLOCKSPEED) / (30/1.001)
+		clockSpeed = 27000000;
+		dectetsPerFrame = 900900; //(clockSpeed) / (30/1.001)
 		dectetsPerLine = 1716;
 		hBlankLen = 276 - (4 * 2); //subtract the length of the EAV and SAV markers 
 		isInterlaced = true;
 		maxFrames = timeSec * 30; //WARN: Doesn't take the 1.001 into account
+	}
+	if (mode == 2) {
+		xDim = 1920;
+		yDim = 1080;
+		isHD = true;
+		numPixels = xDim * yDim * 2;
+		mImageGenerator = new imageGenerator(xDim, yDim);
+		clockSpeed = 74250000; //For 30FPS - only clock rate changes for /1.001 version
+		dectetsPerFrame = 4950000; //(clockSpeed) / (30)
+		dectetsPerLine = 2200;
+		hBlankLen = 280 - (4 * 2); //subtract the length of the EAV and SAV markers 
+		isInterlaced = true;
+		maxFrames = timeSec * 30;
 	}
 }
 
@@ -117,6 +129,8 @@ void pcapGenerator::start()
 		vb[2] = ((numVblankLines - 5) / 2) + 1;
 		vb[3] = numVblankLines - (vb[0] + vb[1] + vb[2]);
 		assert(vb[3] >= 0);
+
+		lineNo = 0;
 
 		//VB
 		for (int i = 0; i < vb[0]; i++) {
@@ -232,7 +246,7 @@ void pcapGenerator::pushPacket()
 		0x00, 0x00, 0x00, 0x00 //Original Packet Length
 	};
 
-	unsigned long long int nanos = (unsigned long long int)((curDectetCount * 1000) / (CLOCKSPEED/1000000));
+	unsigned long long int nanos = (unsigned long long int)((curDectetCount * 1000) / (clockSpeed/1000000));
 	const unsigned long long int bil = 1000000000;
 	const unsigned long long int mil = 1000000;
 
@@ -298,8 +312,26 @@ void pcapGenerator::pushVerticalBlankingLine()
 
 void pcapGenerator::pushHorizBlankData()
 {
-	for (int i = 0; i < hBlankLen; i++) {
-		pushDectet(0x0040);
+	int filler = hBlankLen;
+
+	if (isHD) {
+		uint16_t ln0, ln1, ycr0, ycr1, ccr0, ccr1;
+
+		ln0 = (lineNo & 0x07FF) << 2;
+		ln1 = (lineNo & 0x7800) >> 9;
+		
+		ln0 |= (ln0 & 0x0100) ? 0x00 : 0x0200;
+		ln1 |= (ln1 & 0x0100) ? 0x00 : 0x0200;
+
+		pushDectet(ln0); filler--;
+		pushDectet(ln1); filler--;
+	}
+
+	bool blankLumaToggle = false;
+	for (int i = 0; i < filler; i++) {
+		uint16_t curDectet = blankLumaToggle ? BLANKLUMA : BLANKCHROMA;
+		pushDectet(curDectet);
+		blankLumaToggle = !blankLumaToggle;
 	}
 }
 
@@ -331,6 +363,7 @@ void pcapGenerator::pushSAV(bool f, bool v)
 
 void pcapGenerator::pushEAV(bool f, bool v)
 {
+	lineNo++;
 	pushDectet(0x3FF);
 	pushDectet(0);
 	pushDectet(0);

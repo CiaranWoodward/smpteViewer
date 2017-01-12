@@ -31,13 +31,16 @@ private:
 	unsigned long int curFrameCount;
 	uint16_t sequenceNumber;
 	unsigned long long int curDectetCount;
+	unsigned long long int clockSpeed;
 	unsigned long long int startTime;
 
 	unsigned int pktCursor;
+	unsigned int lineNo;
 	uint8_t bitOffset;
 	uint8_t pkt[PACKETSIZE];
 
 	bool isInterlaced;
+	bool isHD;
 
 	std::ofstream outstr;
 
