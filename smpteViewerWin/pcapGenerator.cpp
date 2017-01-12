@@ -395,6 +395,25 @@ void pcapGenerator::pushHorizBlankData()
 		pushDectet(ln1); filler--;
 
 		//TODO: Fill in CRC dectets
+		uint32_t lumaCRC = CRC::Calculate(lumaBuf, sizeof(lumaBuf), crcParameters);
+		uint32_t chromaCRC = CRC::Calculate(chromaBuf, sizeof(chromaBuf), crcParameters);
+
+		ycr0 = (lumaCRC & 0x1FF);
+		ycr1 = ((uint32_t)(lumaCRC >> 9) & 0x1FF);
+
+		ccr0 = (chromaCRC & 0x1FF);
+		ccr1 = ((uint32_t)(chromaCRC >> 9) & 0x1FF);
+
+		ycr0 |= (ycr0 & 0x0100) ? 0x00 : 0x0200;
+		ycr1 |= (ycr1 & 0x0100) ? 0x00 : 0x0200;
+
+		ccr0 |= (ccr0 & 0x0100) ? 0x00 : 0x0200;
+		ccr1 |= (ccr1 & 0x0100) ? 0x00 : 0x0200;
+
+		pushDectet(ycr0); filler--;
+		pushDectet(ycr1); filler--;
+		pushDectet(ccr0); filler--;
+		pushDectet(ccr1); filler--;
 
 		resetCRCBufs();
 	}
