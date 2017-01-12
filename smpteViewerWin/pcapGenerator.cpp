@@ -2,6 +2,7 @@
 #include "debugUtil.h"
 #include <time.h>
 #include <assert.h>
+#include "CRC.h"
 
 #define BLANKLUMA 0x040
 #define BLANKCHROMA 0x200
@@ -11,6 +12,8 @@
 
 #define PUTBE32(x,y) do{(y)[3]=((x)&0xff);(y)[2]=(((x)>>8)&0xff);(y)[1]=(((x)>>16)&0xff);(y)[0]=(((x)>>24)&0xff);}while(0)
 #define PUTBE16(x,y) do{(y)[1]=((x)&0xff);(y)[0]=(((x)>>8)&0xff);}while(0)
+
+static const CRC::Parameters<uint32_t, 18> crcParameters = { 0x31, 0x0000, 0x0000, false, false };
 
 
 pcapGenerator::pcapGenerator(int mode, int timeSec, std::string filepath) :
@@ -37,6 +40,8 @@ pcapGenerator::pcapGenerator(int mode, int timeSec, std::string filepath) :
 		xDim = 1920;
 		yDim = 1080;
 		isHD = true;
+		chromaBuf = (uint8_t *) malloc((yDim * 10) / 8);
+		lumaBuf = (uint8_t *)malloc((yDim * 10) / 8);
 		numPixels = xDim * yDim * 2;
 		mImageGenerator = new imageGenerator(xDim, yDim);
 		clockSpeed = 74250000; //For 30FPS - only clock rate changes for /1.001 version
@@ -110,6 +115,7 @@ void pcapGenerator::start()
 	resetPacket();
 
 	int numVblankLines = (dectetsPerFrame / dectetsPerLine) - yDim;
+	resetCRCBufs();
 
 	while (1) {
 		uint32_t curPixel = 0;
@@ -150,8 +156,8 @@ void pcapGenerator::start()
 			unsigned int offset = i * xDim * 2;
 			for (int x = 0; x < xDim; x++) {
 				unsigned int index = offset + (x * 2);
-				pushDectet(((uint16_t)pixels[index + 1]) << 2);
-				pushDectet(((uint16_t)pixels[index]) << 2);
+				pushChromaDectet(((uint16_t)pixels[index + 1]) << 2);
+				pushLumaDectet(((uint16_t)pixels[index]) << 2);
 			}
 		}
 
@@ -180,8 +186,8 @@ void pcapGenerator::start()
 			unsigned int offset = i * xDim * 2;
 			for (int x = 0; x < xDim; x++) {
 				unsigned int index = offset + (x * 2);
-				pushDectet(((uint16_t)pixels[index + 1]) << 2);
-				pushDectet(((uint16_t)pixels[index]) << 2);
+				pushChromaDectet(((uint16_t)pixels[index + 1]) << 2);
+				pushLumaDectet(((uint16_t)pixels[index]) << 2);
 			}
 		}
 
@@ -269,6 +275,69 @@ void pcapGenerator::pushPacket()
 	resetPacket();
 }
 
+void pcapGenerator::resetCRCBufs() {
+	if (isHD) {
+		memset(chromaBuf, 0, sizeof(chromaBuf));
+		memset(lumaBuf, 0, sizeof(lumaBuf));
+		chromaCount = 0;
+		lumaCount = 0;
+	}
+}
+
+void pcapGenerator::pushChromaDectet(uint16_t dectet)
+{
+	if (isHD) {
+		uint8_t toInsert[2];
+		uint8_t mask[2];
+
+		uint8_t bitOffset = (chromaCount % 4) * 2;
+
+		uint32_t index = (chromaCount * 10) / 8;
+
+		mask[0] = 0xFF >> bitOffset;
+		mask[1] = 0xFF << (6 - bitOffset);
+
+		toInsert[0] = (dectet >> (2 + bitOffset)) & mask[0];
+		toInsert[1] = (dectet << (6 - bitOffset)) & mask[1];
+
+		for (int i = 0; i < 2; i++) {
+			//Put toInsert[i] in the buffer (using bitwise or so as to not disrupt existing data)
+			chromaBuf[index] |= toInsert[i];
+			if (mask[i] & 0x01) index++;
+		}
+
+		chromaCount++;
+	}
+	pushDectet(dectet);
+}
+
+void pcapGenerator::pushLumaDectet(uint16_t dectet)
+{
+	if (isHD) {
+		uint8_t toInsert[2];
+		uint8_t mask[2];
+
+		uint8_t bitOffset = (lumaCount % 4) * 2;
+
+		uint32_t index = (lumaCount * 10) / 8;
+
+		mask[0] = 0xFF >> bitOffset;
+		mask[1] = 0xFF << (6 - bitOffset);
+
+		toInsert[0] = (dectet >> (2 + bitOffset)) & mask[0];
+		toInsert[1] = (dectet << (6 - bitOffset)) & mask[1];
+
+		for (int i = 0; i < 2; i++) {
+			//Put toInsert[i] in the buffer (using bitwise or so as to not disrupt existing data)
+			lumaBuf[index] |= toInsert[i];
+			if (mask[i] & 0x01) index++;
+		}
+
+		lumaCount++;
+	}
+	pushDectet(dectet);
+}
+
 void pcapGenerator::pushDectet(uint16_t dectet)
 {
 	uint8_t toInsert[2]; 
@@ -304,8 +373,7 @@ void pcapGenerator::pushVerticalBlankingLine()
 {
 	bool blankLumaToggle = false;
 	for (int i = 0; i < (xDim*2); i++) {
-		uint16_t curDectet = blankLumaToggle ? BLANKLUMA : BLANKCHROMA;
-		pushDectet(curDectet);
+		blankLumaToggle ? pushLumaDectet(BLANKLUMA) : pushChromaDectet(BLANKCHROMA);
 		blankLumaToggle = !blankLumaToggle;
 	}
 }
@@ -325,6 +393,10 @@ void pcapGenerator::pushHorizBlankData()
 
 		pushDectet(ln0); filler--;
 		pushDectet(ln1); filler--;
+
+		//TODO: Fill in CRC dectets
+
+		resetCRCBufs();
 	}
 
 	bool blankLumaToggle = false;

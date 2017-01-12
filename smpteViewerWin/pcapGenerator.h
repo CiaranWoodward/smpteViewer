@@ -12,6 +12,9 @@ const uint8_t pktHeaderLength = 42;
 const uint8_t rtpHeaderLength = 12;
 const uint8_t hbrmHeaderLength = 8;
 
+#define DEFCRC 0b00 0000 0000 0011 0001 //0x00031
+#define DEFRCREV 0b10 0011 0000 0000 0000 //0x23000
+
 class pcapGenerator
 {
 public:
@@ -34,6 +37,11 @@ private:
 	unsigned long long int clockSpeed;
 	unsigned long long int startTime;
 
+	uint8_t * chromaBuf;
+	uint8_t * lumaBuf;
+	unsigned int chromaCount;
+	unsigned int lumaCount;
+
 	unsigned int pktCursor;
 	unsigned int lineNo;
 	uint8_t bitOffset;
@@ -46,6 +54,9 @@ private:
 
 	void resetPacket();
 	void pushPacket();
+	void resetCRCBufs();
+	void pushChromaDectet(uint16_t dectet);
+	void pushLumaDectet(uint16_t dectet);
 	void pushDectet(uint16_t dectet);
 	void pushVerticalBlankingLine();
 	void pushHorizBlankData();
