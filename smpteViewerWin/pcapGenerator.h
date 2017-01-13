@@ -26,6 +26,7 @@ private:
 	int yDim;
 	int numPixels;
 	int hBlankLen;
+	int mode;
 	long int dectetsPerFrame;
 	long int dectetsPerLine;
 
