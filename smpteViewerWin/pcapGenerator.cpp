@@ -41,12 +41,12 @@ pcapGenerator::pcapGenerator(int mode, int timeSec, std::string filepath) :
 		xDim = 1920;
 		yDim = 1080;
 		isHD = true;
-		chromaBuf = (uint8_t *) malloc((yDim * 10) / 8);
-		lumaBuf = (uint8_t *)malloc((yDim * 10) / 8);
+		chromaBuf = (uint8_t *) malloc((xDim * 10) / 8);
+		lumaBuf = (uint8_t *)malloc((xDim * 10) / 8);
 		numPixels = xDim * yDim * 2;
 		mImageGenerator = new imageGenerator(xDim, yDim);
 		clockSpeed = 74250000; //For 30FPS - only clock rate changes for /1.001 version
-		dectetsPerFrame = 4950000; //(clockSpeed) / (30)
+		dectetsPerFrame = 2475000; //(clockSpeed) / (30)
 		dectetsPerLine = 2200;
 		hBlankLen = 280 - (4 * 2); //subtract the length of the EAV and SAV markers 
 		isInterlaced = true;
@@ -243,7 +243,13 @@ void pcapGenerator::resetPacket()
 
 	//Initialise the rtp header with correct sync data
 	PUTBE16(sequenceNumber, (pkt + 44));
-	uint32_t timestamp = curDectetCount & 0xFFFFFFFF;
+	uint64_t timestamp = curDectetCount & 0xFFFFFFFF;
+	if (clockSpeed == 74250000) {
+		//Make RTP timestamp relative to 27MHz clock (divide by 2.75)
+		timestamp = timestamp * 4;
+		timestamp = timestamp / 11; 
+	}
+	if (isHD) timestamp /= 2;
 	PUTBE32(timestamp, (pkt + 46));
 
 	//Frame count into the hbrm header
@@ -261,6 +267,7 @@ void pcapGenerator::pushPacket()
 	};
 
 	unsigned long long int nanos = (unsigned long long int)((curDectetCount * 1000) / (clockSpeed/1000000));
+	if (isHD) nanos /= 2;
 	const unsigned long long int bil = 1000000000;
 	const unsigned long long int mil = 1000000;
 
@@ -399,8 +406,8 @@ void pcapGenerator::pushHorizBlankData()
 		ln0 |= (ln0 & 0x0100) ? 0x00 : 0x0200;
 		ln1 |= (ln1 & 0x0100) ? 0x00 : 0x0200;
 
-		pushDectet(ln0); filler--;
-		pushDectet(ln1); filler--;
+		pushDectet(ln0); pushDectet(ln0); filler--;
+		pushDectet(ln1); pushDectet(ln1); filler--;
 
 		//TODO: Fill in CRC dectets
 		uint32_t lumaCRC = CRC::Calculate(lumaBuf, sizeof(lumaBuf), crcParameters);
@@ -418,18 +425,18 @@ void pcapGenerator::pushHorizBlankData()
 		ccr0 |= (ccr0 & 0x0100) ? 0x00 : 0x0200;
 		ccr1 |= (ccr1 & 0x0100) ? 0x00 : 0x0200;
 
+		pushDectet(ccr0);
 		pushDectet(ycr0); filler--;
+		pushDectet(ccr1);
 		pushDectet(ycr1); filler--;
-		pushDectet(ccr0); filler--;
-		pushDectet(ccr1); filler--;
 
 		resetCRCBufs();
 	}
 
 	bool blankLumaToggle = false;
+	if (isHD) filler *= 2;
 	for (int i = 0; i < filler; i++) {
-		uint16_t curDectet = blankLumaToggle ? BLANKLUMA : BLANKCHROMA;
-		pushDectet(curDectet);
+		blankLumaToggle ? pushDectet(BLANKLUMA) : pushDectet(BLANKCHROMA);
 		blankLumaToggle = !blankLumaToggle;
 	}
 }
@@ -437,8 +444,11 @@ void pcapGenerator::pushHorizBlankData()
 void pcapGenerator::pushSAV(bool f, bool v)
 {
 	pushDectet(0x3FF);
+	if(isHD) pushDectet(0x3FF);
 	pushDectet(0);
+	if (isHD) pushDectet(0);
 	pushDectet(0);
+	if (isHD) pushDectet(0);
 	uint16_t xyz = 0;
 	if (f) {
 		if (v) {
@@ -458,14 +468,18 @@ void pcapGenerator::pushSAV(bool f, bool v)
 		}
 	}
 	pushDectet(xyz);
+	if (isHD) pushDectet(xyz);
 }
 
 void pcapGenerator::pushEAV(bool f, bool v)
 {
 	lineNo++;
 	pushDectet(0x3FF);
+	if (isHD) pushDectet(0x3FF);
 	pushDectet(0);
+	if (isHD) pushDectet(0);
 	pushDectet(0);
+	if (isHD) pushDectet(0);
 	uint16_t xyz = 0;
 	if (f) {
 		if (v) {
@@ -485,8 +499,12 @@ void pcapGenerator::pushEAV(bool f, bool v)
 		}
 	}
 	pushDectet(xyz);
+	if (isHD) pushDectet(xyz);
 }
 
 pcapGenerator::~pcapGenerator()
 {
+	if (chromaBuf) free(chromaBuf);
+	if (lumaBuf) free(lumaBuf);
+	delete mImageGenerator;
 }

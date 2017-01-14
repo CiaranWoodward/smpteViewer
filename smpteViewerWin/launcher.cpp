@@ -11,6 +11,7 @@ static void printHelp() {
 	std::cout << "fwd <dst-ip> <dst-port> <filepath> -- forward a SMPTE2022 pcap file over a network" << std::endl;
 	std::cout << "gen <mode> <lengthSeconds> <filepath> -- generate a SMPTE2022 pcap file" << std::endl;
 	std::cout << "                                      -- mode 1 = 720x486i @ 30/1.001 fps" << std::endl;
+	std::cout << "                                      -- mode 2 = 1920x1080i @ 30 fps" << std::endl;
 	std::cout << "help -- print this message" << std::endl;
 	std::cout << "exit -- exit application" << std::endl;
 }
