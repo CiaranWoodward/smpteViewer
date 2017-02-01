@@ -97,6 +97,19 @@ void packetGetter::lockFirstFrame()
 			
 			break;
 		}
+		if ((cur->pkt[62] & 0xFF) == 0xFF &&	//Look for TRS Preamble for a HD pcap file which is 0x3FF 0x000 0x000 (ten bit hex)
+			(cur->pkt[63] & 0xC0) == 0xC0 &&    //The difference is that HD has two interlaced video streams
+			(cur->pkt[64] & 0x0F) == 0x00 &&
+			(cur->pkt[65] & 0xFC) == 0x00 &&
+			(cur->pkt[67] & 0xFF) == 0x00 &&
+			(cur->pkt[68] & 0xC0) == 0x00)
+		{
+			isLocked = true;
+			prevPacketSeq = (cur->pkt[45]) - 1;
+			putPkt(cur);
+
+			break;
+		}
 		freePkt(cur);
 	}
 }

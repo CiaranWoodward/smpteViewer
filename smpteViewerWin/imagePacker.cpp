@@ -37,11 +37,13 @@ void imagePacker::init(int *width, int *height)
 		this->width = 720;
 		this->height = 486;
 		isInterlaced = true;
+		isHD = false;
 	}
 	else if (mMetadata.frame == 0x20) {
 		this->width = 1920;
 		this->height = 1080;
 		isInterlaced = true;
+		isHD = true;
 	}
 	else {
 		logerror("Currently unsupported sdi format - aborted");
@@ -64,6 +66,7 @@ uint8_t * imagePacker::getNextPixels()
 	int curSDIDataCount = 0;
 	int ignoreDectets = 0;
 	int syncStart = 0, ancStart = 0;
+	bool hdSplitter = false;
 	bool horizontalBlanking = 0;
 	bool verticalBlanking = 0;
 	bool interleaved = 0;
@@ -103,6 +106,12 @@ uint8_t * imagePacker::getNextPixels()
 			//Remove any special data
 			//TODO: Sync to frame starts and edges
 			if (curDectet < 4 || curDectet > 1019 || ancStart || syncStart) {
+
+				if (isHD) {
+					//For HD Data, read every other packet (EAVs and SAVs must happen at the same time anyway)
+					hdSplitter = !hdSplitter;
+					if (hdSplitter) continue;
+				}
 
 				if (ancStart == 0) {
 					if (curDectet == 0x3FF && syncStart == 0) syncStart = 1;

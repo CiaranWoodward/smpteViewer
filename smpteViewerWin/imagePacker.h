@@ -25,5 +25,6 @@ private:
 	packetGetter mPacketGetter;
 	struct SMPTE2022_metadata mMetadata;
 	bool isInterlaced;
+	bool isHD;
 };
 
