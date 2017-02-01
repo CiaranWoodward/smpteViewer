@@ -1,6 +1,6 @@
 CFLAGS=-std=c++11 -pthread -I/usr/local/include/SDL2/ -c -Wall -O3
 LDFLAGS=-L/usr/local/lib -lSDL2 -pthread 
-SOURCES=launcher.cpp imagePacker.cpp packetGetter.cpp windowManager.cpp smpteForwarder.cpp
+SOURCES=launcher.cpp imagePacker.cpp packetGetter.cpp pcapGenerator.cpp imageGenerator.cpp windowManager.cpp smpteForwarder.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=hello
 
