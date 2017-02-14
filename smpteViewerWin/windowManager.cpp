@@ -54,7 +54,7 @@ void windowManager::start()
 		exit(1);
 	}
 
-	std::chrono::time_point<std::chrono::steady_clock> prev = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::high_resolution_clock> prev = std::chrono::high_resolution_clock::now();
 	int missedTimeCount = 0;
 
 	while (1) {

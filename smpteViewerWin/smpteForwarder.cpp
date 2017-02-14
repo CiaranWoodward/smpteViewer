@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <chrono>
 #include <thread>
+#include <cstring>
 
 #ifdef _WIN64
 #include <winsock2.h>
@@ -99,8 +100,8 @@ void smpteForwarder::start()
 
 	std::this_thread::sleep_for(std::chrono::seconds(1)); //Allow buffer to fill
 
-	std::chrono::time_point<std::chrono::steady_clock> begin = std::chrono::high_resolution_clock::now();
-	std::chrono::time_point<std::chrono::steady_clock> next;
+	std::chrono::time_point<std::chrono::high_resolution_clock> begin = std::chrono::high_resolution_clock::now();
+	std::chrono::time_point<std::chrono::high_resolution_clock> next;
 
 	originTime += ((uint32_t) curPkt->pkt[46]) << 24;
 	originTime += ((uint32_t) curPkt->pkt[47]) << 16;

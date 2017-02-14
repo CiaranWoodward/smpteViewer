@@ -122,7 +122,7 @@ void packetGetter::sFillBuffer(packetGetter * const context, std::string filepat
 void packetGetter::fillBuffer(std::string & filepath)
 {
 	while (1) {
-		std::ifstream instr = std::ifstream(filepath, std::ios::in | std::ios::binary);
+		std::ifstream instr (filepath, std::ios::in | std::ios::binary);
 		while (reset || exitFlag) {
 			if (exitFlag) return;
 		}
