@@ -45,6 +45,12 @@ void imagePacker::init(int *width, int *height)
 		isInterlaced = true;
 		isHD = true;
 	}
+	else if (mMetadata.frame == 0x21) {
+		this->width = 1920;
+		this->height = 1080;
+		isInterlaced = false;
+		isHD = true;
+	}
 	else {
 		logerror("Currently unsupported sdi format - aborted");
 		*width = 0;
