@@ -10,11 +10,14 @@
 
 #define BUFSIZE 100
 #define PACKETSIZE 1437
+#define MAXPACKETSIZE 1441
 
 struct pkt_ll {
-	uint8_t pkt[PACKETSIZE];
+	uint8_t pkt[MAXPACKETSIZE];
 	pkt_ll * next;
 	bool isEOF;
+
+	uint8_t *GetStartOfPayload();
 };
 
 class packetGetter

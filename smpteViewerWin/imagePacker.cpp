@@ -83,19 +83,21 @@ uint8_t * imagePacker::getNextPixels()
 		pkt_ll * pkt = mPacketGetter.getNextPacket();
 		if (pkt == NULL) break; //Drop frame
 		uint8_t * packet = pkt->pkt;
+		uint8_t * payload = pkt->GetStartOfPayload();
 		if (packet[43] & 0x80) processingRemaining = false; //Marker is set, final packet of frame
-		int curOffset = 62;
+		int curOffset = 0;
+		int payloadLen = 1376;
 
-		while (curOffset <= 1437) {
+		while (curOffset < payloadLen) {
 			//Bitwise voodoo to extract the 10bit values from the 16 bit stream
 			uint8_t mask1 = 0xFF >> bitOffset;
 			uint8_t mask2 = 0xFF << (6 - bitOffset);
-			if(!skipFirstOctet) curDectet = ((uint16_t)(packet[curOffset++] & mask1)) << (2 + bitOffset);
-			if (curOffset > 1437) {
+			if(!skipFirstOctet) curDectet = ((uint16_t)(payload[curOffset++] & mask1)) << (2 + bitOffset);
+			if (curOffset >= payloadLen) {
 				skipFirstOctet = true;
 				continue;
 			}
-			curDectet += ((uint16_t)(packet[curOffset] & mask2)) >> (6-bitOffset);
+			curDectet += ((uint16_t)(payload[curOffset] & mask2)) >> (6-bitOffset);
 			skipFirstOctet = false;
 
 			bitOffset += 2;

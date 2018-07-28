@@ -86,10 +86,12 @@ void packetGetter::lockFirstFrame()
 {
 	while (!isLocked) {
 		pkt_ll * cur = popPkt();
-		if (cur->pkt[62] == 0xFF &&	//Look for TRS Preamble which is 0x3FF 0x000 0x000 (ten bit hex)
-			cur->pkt[63] == 0xC0 &&
-			cur->pkt[64] == 0x00 &&
-			(cur->pkt[65] & 0xFC) == 0x00)
+		uint8_t *payload = cur->GetStartOfPayload();
+		
+		if (payload[0] == 0xFF &&	//Look for TRS Preamble which is 0x3FF 0x000 0x000 (ten bit hex)
+			payload[1] == 0xC0 &&
+			payload[2] == 0x00 &&
+			(payload[3] & 0xFC) == 0x00)
 		{
 			isLocked = true;
 			prevPacketSeq = (cur->pkt[45]) - 1;
@@ -97,12 +99,12 @@ void packetGetter::lockFirstFrame()
 			
 			break;
 		}
-		if ((cur->pkt[62] & 0xFF) == 0xFF &&	//Look for TRS Preamble for a HD pcap file which is 0x3FF 0x000 0x000 (ten bit hex)
-			(cur->pkt[63] & 0xC0) == 0xC0 &&    //The difference is that HD has two interlaced video streams
-			(cur->pkt[64] & 0x0F) == 0x00 &&
-			(cur->pkt[65] & 0xFC) == 0x00 &&
-			(cur->pkt[67] & 0xFF) == 0x00 &&
-			(cur->pkt[68] & 0xC0) == 0x00)
+		if ((payload[0] & 0xFF) == 0xFF &&	  //Look for TRS Preamble for a HD pcap file which is 0x3FF 0x000 0x000 (ten bit hex)
+			(payload[1] & 0xC0) == 0xC0 &&    //The difference is that HD has two interlaced video streams
+			(payload[2] & 0x0F) == 0x00 &&
+			(payload[3] & 0xFC) == 0x00 &&
+			(payload[4] & 0xFF) == 0x00 &&
+			(payload[5] & 0xC0) == 0x00)
 		{
 			isLocked = true;
 			prevPacketSeq = (cur->pkt[45]) - 1;
@@ -144,7 +146,7 @@ void packetGetter::fillBuffer(std::string & filepath)
 			//Fill packet
 			instr.read((char *)header, 16);
 			uint32_t length = ((uint32_t)header[8]) | (((uint32_t)header[9]) << 8) | (((uint32_t)header[10]) << 16) | (((uint32_t)header[11]) << 24);
-			if (length != 1438) {
+			if (length != 1438 && length != 1442) {
 				instr.ignore(length, EOF);
 			}
 			else {
@@ -262,4 +264,14 @@ packetGetter::~packetGetter()
 	while (free_pkt_head != NULL) {
 		delete popFreePkt();
 	}
+}
+
+uint8_t * pkt_ll::GetStartOfPayload()
+{
+	uint8_t *rval = pkt + 62;
+	uint8_t ClockFreq = ((pkt[56] & 0x01) << 3) | ((pkt[57] & 0xE0) >> 5);
+
+	if (ClockFreq != 0) rval += 4;
+
+	return rval;
 }
