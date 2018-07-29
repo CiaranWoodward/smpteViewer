@@ -34,6 +34,7 @@ private:
 	void fillBuffer(std::string & filepath);
 	void putStash(pkt_ll * packet);
 	void popStash();
+	bool isOverstashed();
 	void putPkt(pkt_ll * packet);
 	void freePkt(pkt_ll * packet);
 	pkt_ll * popFreePkt();

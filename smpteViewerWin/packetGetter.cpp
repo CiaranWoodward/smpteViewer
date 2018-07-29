@@ -31,7 +31,7 @@ pkt_ll * packetGetter::getNextPacket()
 	//Then find the next packet needed
 	struct pkt_ll * curPkt = NULL;
 
-	while (!found) {
+	while (!found && !isOverstashed()) {
 		//Get packet
 		curPkt = popPkt();
 
@@ -196,6 +196,13 @@ void packetGetter::popStash() {
 	stash_pkt_tail = NULL;
 	pkt_head_mutex.unlock();
 	pkt_head_cv.notify_one();
+}
+
+bool packetGetter::isOverstashed()
+{
+	std::unique_lock<std::mutex> lock(free_pkt_head_mutex);
+	std::unique_lock<std::mutex> lock2(pkt_head_mutex);
+	return (free_pkt_head == NULL) && (pkt_head == NULL);
 }
 
 void packetGetter::putPkt(pkt_ll * packet)

@@ -70,14 +70,15 @@ uint8_t * imagePacker::getNextPixels()
 	bool exit = false;
 	bool processingRemaining = true;
 	int curSDIDataCount = 0;
-	int ignoreDectets = 0;
-	int syncStart = 0, ancStart = 0;
-	bool hdSplitter = false;
+	int ignoreDectets = 0, ignoreDectets2 = 0;
+	int syncStart = 0, ancStart = 0, syncStart2 = 0, ancStart2 = 0;
 	bool horizontalBlanking = 0;
 	bool verticalBlanking = 0;
 	bool interleaved = 0;
 	bool skipFirstOctet = false;
 	uint16_t curDectet = 0;
+	volatile uint16_t history[10];
+	int histIndex = 0;
 	uint8_t bitOffset = 0;
 	while (processingRemaining) {
 		pkt_ll * pkt = mPacketGetter.getNextPacket();
@@ -100,33 +101,40 @@ uint8_t * imagePacker::getNextPixels()
 			curDectet += ((uint16_t)(payload[curOffset] & mask2)) >> (6-bitOffset);
 			skipFirstOctet = false;
 
+			histIndex = (histIndex + 1) % 10;
+			history[histIndex] = curDectet;
+
 			bitOffset += 2;
 			if (bitOffset == 8) {
 				bitOffset = 0;
 				curOffset++;
 			}
 
-			if (ignoreDectets) {
-				ignoreDectets--;
-				continue;
+			if (isHD) {
+				//For HD Data, seperate nonvideo processing to channels
+				int temp;
+				temp = ancStart; ancStart = ancStart2; ancStart2 = temp;
+				temp = syncStart; syncStart = syncStart2; syncStart2 = temp;
+				temp = ignoreDectets; ignoreDectets = ignoreDectets2; ignoreDectets2 = temp;
 			}
 
 			//Remove any special data
 			//TODO: Sync to frame starts and edges
-			if (curDectet < 4 || curDectet > 1019 || ancStart || syncStart) {
+			if (curDectet < 4 || curDectet > 1019 || ancStart >= 3 || syncStart >= 3 || ignoreDectets) {
 
-				if (isHD) {
-					//For HD Data, read every other packet (EAVs and SAVs must happen at the same time anyway)
-					hdSplitter = !hdSplitter;
-					if (hdSplitter) continue;
+				if (ignoreDectets)
+				{
+					ignoreDectets--;
+					continue;
 				}
 
-				if (ancStart == 0) {
-					if (curDectet == 0x3FF && syncStart == 0) syncStart = 1;
+				if (ancStart < 3) {
+					if (curDectet == 0x3FF && syncStart < 3) syncStart = 1;
 					else if (curDectet == 0x00 && syncStart == 1) syncStart = 2;
 					else if (curDectet == 0x00 && syncStart == 2) syncStart = 3;
 					else if (syncStart == 3) {
 						syncStart = 0;
+						ancStart = 0;
 						if (curDectet & (1 << 7)) {	//V bit = Vertical blanking
 							verticalBlanking = 1;
 						}
@@ -136,6 +144,7 @@ uint8_t * imagePacker::getNextPixels()
 
 						if (curDectet & (1 << 6)) {	//H bit = Horizontal blanking
 							horizontalBlanking = 1;
+							ignoreDectets = 4;
 						}
 						else {
 							horizontalBlanking = 0;
@@ -148,21 +157,25 @@ uint8_t * imagePacker::getNextPixels()
 							interleaved = 0;
 						}
 					}
+					else syncStart = 0;
 				}
 
-				if (syncStart == 0) {
-					if (curDectet == 0x00 && ancStart == 0) ancStart = 1;
+				if (syncStart < 3) {
+					if (curDectet == 0x00 && ancStart < 3) ancStart = 1;
 					else if (curDectet == 0x3FF && ancStart == 1) ancStart = 2;
 					else if (curDectet == 0x3FF && ancStart == 2) ancStart = 3;
 					else if (ancStart == 3 || ancStart == 4) ancStart++;
 					else if (ancStart == 5) {
 						ignoreDectets = (curDectet & 0xFF) + 1;
 						ancStart = 0;
+						syncStart = 0;
 					}
+					else ancStart = 0;
 				}
 
 				continue;
 			}
+			ancStart = syncStart = 0;
 
 			if (horizontalBlanking || verticalBlanking) continue;
 
